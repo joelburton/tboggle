@@ -4,6 +4,7 @@ import dataclasses
 import sys
 from random import randint
 
+from rich.markup import escape
 from textual import on
 from textual.timer import Timer
 from textual.app import App, ComposeResult
@@ -123,9 +124,10 @@ class Results(DataTable):
             self.show_page(self.cur_page_num - 1)
 
     def on_data_table_cell_highlighted(self, event):
-        if event.value:
-            defn = get_def(event.value)
-            self.app.query_one("#def-area").update(defn)
+        if not self.disabled and event.value:
+            word = event.value
+            defn = escape(get_def(word) or "(nothing found)")
+            self.app.query_one("#def-area").update(f"[u]{word}[/]: [i]{defn}[/]")
 
     def make_list(self, title, words_set):
         self.header_height = 0
@@ -216,14 +218,14 @@ class LookupModal(ModalScreen):
         with Container():
             yield Label("Lookup word ([orange]Esc[/] to exit)")
             yield Input(placeholder="Enter word")
-            yield Label(id="lookup-def", markup=False)
+            yield Label(id="lookup-def")
 
     @on(Input.Submitted)
     def submitted(self, event):
         word = event.value
-        defn = get_def(word)
+        defn = escape(get_def(word) or "(nothing found)")
         self.query_one(Input).value = ""
-        self.query_one(Label).update(f"{word}: {defn or '(nothing found)'}")
+        self.query_one(Label).update(f"[u]{word}[/]: [i]{defn}[/]")
 
 class BoggleApp(App):
     CSS_PATH = "styles.css"
@@ -285,11 +287,12 @@ class BoggleApp(App):
                 yield StatusArea()
             with Vertical(classes="right-pane"):
                 if self.playing:
-                    yield Log()
+                    # yield Log()
+                    yield Results()
                 else:
                     yield Results()
         if not self.playing:
-            yield Label(id="def-area", markup=False)
+            yield Label(id="def-area")
         yield Footer()
 
     # -----------------------------
@@ -336,17 +339,14 @@ class BoggleApp(App):
         fl.border_title = "Stats"
         fl.border_subtitle = ""
         fl.clear()
-        fl.write_line("Moth is awesome")
 
     # -------------------------------
 
     def add_word(self, word):
-        self.query_one("Log").write_line(word)
-        sa = self.query_one(StatusArea)
-        # print("\n\n\n", sa.words)
-        # sa.words = len(self.game.found.words)
-        # sa.long = self.game.found.longest
-        # sa.score = self.game.found.score
+        found = self.query_one(Results)
+        found.make_list("Found", self.game.found.words)
+        found.cursor_type = "none"
+        found.disabled = True
         f = self.game.found
         self.query_one("#num-score").update(str(f.score))
         self.query_one("#num-words").update(str(len(f.words)))

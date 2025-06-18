@@ -1,0 +1,114 @@
+.right-pane {
+}
+Board { 
+    border: solid gray; 
+    padding: 1 2; 
+}
+
+WordInput { 
+    height: 2;
+    border: none;
+    margin: 0 1;
+    border-bottom: solid $primary; 
+    padding: 0 0;
+}
+
+WordInput.dup {
+    border-bottom: solid $warning;
+}
+
+WordInput.bad {
+    border-bottom: solid $error;
+}
+
+WordInput.good {
+    border-bottom: solid $success;
+}
+
+Log { 
+    height: 1fr; 
+    border: solid gray; 
+    padding: 0 1; 
+    overflow-x: hidden;
+}
+
+Results {
+    height: 1fr; 
+    border: solid gray; 
+    padding: 0 1; 
+}
+
+PauseModal {
+}
+
+PauseModal Container {
+    margin: 2;
+    align: center middle;
+    border: double $error;
+}
+
+LookupModal Container {
+    margin: 2;
+    align: center middle;
+    border: double $error;
+}
+
+ExitModal {
+    align: center middle;
+}
+
+ExitModal Vertical {
+    height: 7;
+    width: 52;
+    border: double $error;
+}
+
+ExitModal Horizontal {
+    width: 100%;
+    align: center middle;
+}
+
+ExitModal Label {
+    width: 100%;
+    /*align: center middle;*/
+    text-align: center;
+}
+
+LookupModal Input {
+    margin: 1;
+}
+PauseModal Label {
+    text-align: center;
+    width: 100%;
+}
+
+LookupModal Label {
+    text-align: center;
+    width: 100%;
+}
+
+StatusArea {
+    layout: grid;
+    grid-size: 3;
+    height: 4;
+    padding: 0 1;
+}
+StatusArea Label {
+}
+
+.status-label {
+    color: $primary;
+}
+
+.status-r {
+    width: 100%;
+    text-align: right;
+}
+
+.status-base {
+    color: gray;
+}
+
+#num_time {
+    color: yellow;
+}
