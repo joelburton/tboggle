@@ -144,7 +144,7 @@ Board* make_board(
 }
 
 
-constexpr int NUM_FACES = 6;
+#define NUM_FACES 6
 
 /** Shuffle order of dice.
  *
@@ -160,7 +160,7 @@ static void shuffle_array(char *array[], const int n) {
     }
 }
 
-constexpr short MULTIFACE_DICE[] = {
+const short MULTIFACE_DICE[] = {
     ('_' << 8) + '_',
     ('Q' << 8) + 'U',
     ('I' << 8) + 'N',
