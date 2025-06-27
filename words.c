@@ -412,6 +412,7 @@ struct WalkData {
     int marker;
 };
 
+#if __linux__
 void btree_callback(const void *n, const VISIT value, void *data) {
     if (value == leaf || value == postorder) {
         struct WalkData *walker = data;
@@ -425,7 +426,22 @@ void bws_btree_to_array(Board *board) {
     struct WalkData walker = {board->word_array, 0};
     twalk_r(board->legal, btree_callback, &walker);
 }
+#else
+struct WalkData *walker;
+void btree_callback(const void *n, const VISIT value, int depth) {
+    if (value == leaf || value == postorder) {
+        BoardWord *bw = *(BoardWord **)n;
+        walker->words[walker->marker++] = bw->word;
+    }
+}
 
+void bws_btree_to_array(Board *board) {
+    board->word_array = malloc(((board->num_words + 1) * sizeof(BoardWord*)));
+    struct WalkData w = {board->word_array, 0};
+    walker = &w;
+    twalk(board->legal, btree_callback);
+}
+#endif
 
 char **get_words(
     char *set[],
