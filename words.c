@@ -2,12 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <sys/mman.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <err.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #define CHILD_BIT_SHIFT 10
 #define EOW_BIT_MASK 0X00000200
@@ -19,8 +19,13 @@
 #define DAWG_NEXT(arr, i)  (((arr)[i] & EOL_BIT_MASK) ? 0 : (i) + 1)
 #define DAWG_CHILD(arr, i)  ((arr)[i] >> CHILD_BIT_SHIFT)
 
-#define FATAL2(m, m2) \
-err(1, "%s:%i: %s: %s %s", __FILE__, __LINE__, __func__, m, m2)
+char err_msg[1024];
+
+#define FATAL2(m, m2) { \
+sprintf(err_msg, "%s:%i: (%s) %s %s", __FILE__, __LINE__, __FUNCTION__, m, m2); \
+perror(err_msg); \
+exit(1); \
+}
 
 typedef struct {
     const char *word;
@@ -45,7 +50,10 @@ const int32_t *dawg;
  * @param path
  */
 
+#if __linux__
+#include <sys/mman.h>
 void read_dawg(const char *path) {
+    printf("read_dawg %s\n", path);
     const int fd = open(path, O_RDONLY);
     if (fd < 0) FATAL2("Cannot open dict at", path);
 
@@ -64,6 +72,21 @@ void read_dawg(const char *path) {
     // Skip over the first integer, which was the # of dawg items
     dawg = f + 1;
 }
+#else
+void read_dawg(const char *path) {
+    printf("read_dawg_mac %s\n", path);
+    FILE *f = fopen(path, "rb");
+    int32_t nelems;
+    if (fread(&nelems, 4, 1, f) != 1) FATAL2("Cannot get size of", path);
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    int32_t *f2 = malloc(size);
+    if (fread(f2, size, 1, f) != 1) FATAL2("Cannot read dict at", path);
+    dawg = f2 + 1;
+}
+#endif
+
 
 
 /****************************** BOARD *****************************/
@@ -438,6 +461,6 @@ char **get_words(
     *dice_simple = b->dice_simple;
 //    fprintf(stderr, "=%s\n", *dice_simple);
     bws_btree_to_array(b);
-    b->word_array[b->num_words] = nullptr;
+    b->word_array[b->num_words] = NULL;
     return b->word_array;
 }

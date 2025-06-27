@@ -12,7 +12,6 @@ WORD_SCORES = [0, 0, 0, 1, 1, 2, 3, 5, 11, 11, 11, 11, 11, 11, 11, 11, 11]
 def read_dawg(path: str) -> None:
     c_words.read_dawg(c_char_p(path.encode("utf8")))
 
-
 read_dawg("words.dat")
 db = sqlite3.connect("all.sqlite3")
 GET_WORD_SQL = "SELECT def FROM defs WHERE word = ?"
