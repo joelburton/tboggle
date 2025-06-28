@@ -53,7 +53,6 @@ const int32_t *dawg;
 #if __linux__
 #include <sys/mman.h>
 void read_dawg(const char *path) {
-    printf("read_dawg %s\n", path);
     const int fd = open(path, O_RDONLY);
     if (fd < 0) FATAL2("Cannot open dict at", path);
 
@@ -74,7 +73,6 @@ void read_dawg(const char *path) {
 }
 #else
 void read_dawg(const char *path) {
-    printf("read_dawg_mac %s\n", path);
     FILE *f = fopen(path, "rb");
     int32_t nelems;
     if (fread(&nelems, 4, 1, f) != 1) FATAL2("Cannot get size of", path);
@@ -104,6 +102,7 @@ typedef struct Board {
     int max_score;
     int min_longest;
     int max_longest;
+    int min_legal;
     void *legal;
     char **word_array;
     int num_words;
@@ -122,7 +121,8 @@ Board* make_board(
     int min_score,
     int max_score,
     int min_longest,
-    int max_longest
+    int max_longest,
+    int min_legal
 ) {
     if (width * height > 64)
         FATAL2("Oops", "Board too big");
@@ -139,6 +139,7 @@ Board* make_board(
     b->max_score = max_score == -1 ? INT32_MAX : max_score;
     b->min_longest = min_longest;
     b->max_longest = max_longest == -1 ? INT32_MAX : max_longest;
+    b->min_legal = min_legal;
     b->score = 0;
     return b;
 }
@@ -320,8 +321,8 @@ static bool find_words( // NOLINT(*-no-recursion)
 
 
     // Add this word to the found-words.
-    if (DAWG_EOW(dawg, i)) {
-        word[word_len] = '\0';
+    if (DAWG_EOW(dawg, i) && word_len >= board->min_legal) {
+	word[word_len] = '\0';
         if (add_word(board, word, word_len) == ADD_FAIL) return false;
     }
 
@@ -400,7 +401,7 @@ int fill_board(Board *board, int max_tries){
         make_dice(board);
         if (find_all_words(board)) break;
     }
-    printf("tries: %d\n", count);
+    // printf("tries: %d\n", count);
     return count;
         // free_words(board);
 }
@@ -454,6 +455,7 @@ char **get_words(
     int max_score,
     int min_longest,
     int max_longest,
+    int min_legal,
     int max_tries,
     int random_seed,
     int *num_tries,
@@ -470,8 +472,10 @@ char **get_words(
         min_score,
         max_score,
         min_longest,
-        max_longest
+        max_longest,
+	min_legal
     );
+    //printf("min_legal %d\n", b->min_legal);
 
     *num_tries = fill_board(b, max_tries);
     *dice_simple = b->dice_simple;

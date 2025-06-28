@@ -55,6 +55,7 @@ class Game:
     bad: WordList
     board: list[list[str]]
     duration: int
+    min_legal: int
 
     def __init__(
             self,
@@ -62,7 +63,9 @@ class Game:
             height: int,
             width: int,
             scores=None,
-            duration=120):
+            duration=120,
+            min_legal=3,
+    ):
         if scores is None:
             scores = WORD_SCORES
         self.dice_set = dice_set
@@ -74,6 +77,7 @@ class Game:
         self.bad = WordList()
         self.board = []
         self.duration = duration
+        self.min_legal = min_legal
 
     def fill_board(
             self,
@@ -103,6 +107,7 @@ class Game:
             min_words, max_words,
             min_score, max_score,
             min_longest, max_longest,
+            self.min_legal,
             max_tries,
             random_seed,
             byref(tried),

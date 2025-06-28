@@ -13,11 +13,12 @@ from textual.containers import Horizontal, Vertical, Container
 from textual.reactive import reactive, var
 from textual.screen import ModalScreen
 from textual.widget import Widget
-from textual.widgets import Static, Footer, Input, DataTable, Label, Log, Button
+from textual.widgets import Static, Footer, Input, DataTable, Label, Button
 
 import fill
 from dice import DiceSet
 from game import Game, GuessResult, get_def
+from chooser import Chooser, Choices
 
 
 class Board(Widget):
@@ -182,27 +183,33 @@ class ExitModal(ModalScreen):
 
     BINDINGS = [
         Binding("escape", "dismiss"),
-        Binding("a", "yes"),
-        Binding("ctrl+a", "yes"),
-        Binding("q", "no"),
-        Binding("ctrl+q", "no"),
+        Binding("b", "board"),
+        Binding("ctrl+b", "board"),
+        Binding("g", "game"),
+        Binding("ctrl+g", "game"),
+        Binding("q", "quit"),
+        Binding("ctrl+q", "quit"),
     ]
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield Label("Play again or quit?\n")
+            yield Label("Play again or quit? ([orange]Esc[/] to cancel)\n")
             with Horizontal():
-                yield Button("Again", id="again", variant="primary")
+                yield Button("New Board", id="board", variant="primary")
+                yield Button("New Game", id="game", variant="warning")
                 yield Button("Quit", id="quit", variant="error")
-                yield Button("Cancel", id="continue", variant="default")
 
-    @on(Button.Pressed, "#again")
-    def action_yes(self) -> None:
-        self.app.exit(True)
+    @on(Button.Pressed, "#board")
+    def action_board(self) -> None:
+        self.app.exit("board")
+
+    @on(Button.Pressed, "#game")
+    def action_game(self) -> None:
+        self.app.exit("game")
 
     @on(Button.Pressed, "#quit")
-    def action_no(self) -> None:
-        self.app.exit(False)
+    def action_quit(self) -> None:
+        self.app.exit("quit")
 
     @on(Button.Pressed, "#continue")
     def action_continue(self) -> None:
@@ -354,12 +361,33 @@ class BoggleApp(App):
 
 
 if __name__ == "__main__":
-    size = sys.argv[1] if len(sys.argv) > 1 else "4"
-    dur = int(sys.argv[2]) if len(sys.argv) > 2 else 180
-    set =  DiceSet.get_by_name(size)
+    import os
+
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+    # size = sys.argv[1] if len(sys.argv) > 1 else "4"
+    # dur = int(sys.argv[2]) if len(sys.argv) > 2 else 180
+    choices: Choices = None
     while True:
-        game = Game(set, int(size), int(size), duration=dur)
-        game.fill_board()
+        if not choices:
+            choices = Chooser().run()
+            if not choices: break
+
+        set =  DiceSet.get_by_name(choices.set)
+        game = Game(set, set.num, set.num, duration=choices.timeout, min_legal=choices.legal_min)
+        game.fill_board(
+            min_words=choices.min_words,
+            max_words=choices.max_words,
+            min_score=choices.min_score,
+            max_score=choices.max_score,
+            min_longest=choices.min_longest,
+            max_longest=choices.max_longest,
+        )
         app = BoggleApp(game)
-        if not app.run():
+        rez = app.run()
+        if rez == "board":
+            pass
+        elif rez == "game":
+            choices = None
+        else:
             break
