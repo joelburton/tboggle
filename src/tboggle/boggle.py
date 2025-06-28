@@ -84,9 +84,10 @@ class StatusArea(Container):
         longest = str(game.found.longest)
         score = str(game.found.score)
 
-        yield Label("Time:", classes="status-label")
-        yield Label(dur, classes="status-r status-base")
-        yield Label(time_left, classes="status-r", id="num_time")
+        if self.app.game.duration:
+            yield Label("Time:", classes="status-label")
+            yield Label(dur, classes="status-r status-base")
+            yield Label(time_left, classes="status-r", id="num_time")
 
         yield Label("Words:", classes="status-label")
         yield Label(max_words, classes="status-r status-base")
@@ -262,7 +263,8 @@ class BoggleApp(App):
         super().__init__()
 
     def on_mount(self):
-        self.my_timer = self.set_interval(1, self.update_timer)
+        if self.game.duration:
+            self.my_timer = self.set_interval(1, self.update_timer)
 
     def update_timer(self):
         if self.timer:
@@ -278,7 +280,8 @@ class BoggleApp(App):
 
     def action_end(self):
         self.timer = False
-        self.my_timer.stop()
+        if self.game.duration:
+            self.my_timer.stop()
         self.playing = False
 
     def compose(self):
@@ -305,6 +308,8 @@ class BoggleApp(App):
     # -----------------------------
 
     def check_action(self, event, parameters):
+        if not self.app.game.duration and event == "pause":
+            return False
         if self.playing:
             if event in ("stats", "missed", "found", "bad", "again", "lookup"):
                 return False
@@ -374,7 +379,7 @@ def main():
             if not choices: break
 
         set =  DiceSet.get_by_name(choices.set)
-        game = Game(set, set.num, set.num, duration=choices.timeout, min_legal=choices.legal_min)
+        game = Game(set, set.num, set.num, duration=choices.timeout, min_legal=choices.legal_min, scores=choices.scores)
         game.fill_board(
             min_words=choices.min_words,
             max_words=choices.max_words,

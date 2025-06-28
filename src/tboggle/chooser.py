@@ -4,7 +4,7 @@ import dataclasses
 
 from textual import on
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal, Container
+from textual.containers import Horizontal, Container, VerticalScroll
 from textual.widgets import Input, Label, Button, Header, Select, Collapsible, Footer
 from textual.binding import Binding
 
@@ -21,21 +21,21 @@ class Choices:
     max_score: int
     min_longest: int
     max_longest: int
+    scores: list[int]
 
 
 class Chooser(App):
     TITLE = "Boggle"
     CSS = ("""
-    
     #main {
-    max-width: 60;
-    layout: grid;
-    grid-size: 2;
-    grid-columns: 2fr 3fr;
-    height: 9;
+        max-width: 60;
+        layout: grid;
+        grid-size: 2;
+        grid-columns: 2fr 3fr;
+        height: 12;
     }
     #adv {
-    max-width: 60;
+        max-width: 60;
         layout: grid;
         grid-size: 3;
         height: 6;
@@ -59,6 +59,7 @@ class Chooser(App):
     }
     #start-buttons {
         margin-top: 1;
+        height: 4;
     }
     #start-buttons Button {
         margin-right: 1;
@@ -77,70 +78,89 @@ class Chooser(App):
     def compose(self) -> ComposeResult:
         yield Header()
 
-        with Collapsible(title="Game options", collapsed=False):
-            with Container(id="main"):
+        with VerticalScroll(id="full"):
 
-                yield Label("Cube set:")
-                yield Select(
-                    ((s.desc, s.name) for s in sets),
-                    id="set",
-                    prompt="Choose cube set",
-                    value="4",
-                )
+            with Collapsible(title="Game options", collapsed=False):
+                with Container(id="main"):
 
-                yield Label("Legal words:")
-                yield Select(
-                    [
-                        ("3 letters or more", 3),
-                        ("4 letters or more", 4),
-                        ("5 letters or more", 5),
-                    ],
-                    id="legal-min",
-                    value=3,
-                )
-
-                yield Label("Game timeout:")
-                yield Select(
-                    [
-                        ("1 minute", 60),
-                        ("1.5 minutes", 90),
-                        ("2 minutes", 120),
-                        ("3 minutes", 180),
-                        ("4 minutes", 240),
-                        ("5 minutes", 300),
-                        ("7 minutes", 420),
-                        ("10 minutes", 600),
-                        ("No timeout", 0),
-                    ],
-                    prompt="Choose game timeout",
-                    id="timeout",
-                    value=180,
-                )
-
-        with Collapsible(title="Min/max options for board finding", collapsed=True):
-            with Container(id="adv"):
-                for (id, label) in [
-                    ("words", "Number words:"),
-                    ("score", "Score:"),
-                    ("longest", "Longest word:"),
-                ]:
-                    yield Label(label)
-                    yield Input(
-                        type="integer",
-                        id=f"min-{id}",
-                        value="0",
-                        max_length=4,
-                    )
-                    yield Input(
-                        type="integer",
-                        id=f"max-{id}",
-                        value="9999",
-                        max_length=4,
+                    yield Label("Cube set:")
+                    yield Select(
+                        ((s.desc, s.name) for s in sets),
+                        id="set",
+                        prompt="Choose cube set",
+                        value="4",
                     )
 
-        with Horizontal(id="start-buttons"):
-            yield Button("Play", variant="success", id="play")
-            yield Button("Quit", variant="error", id="quit")
+                    yield Label("Legal words:")
+                    yield Select(
+                        [
+                            ("3 letters or more", 3),
+                            ("4 letters or more", 4),
+                            ("5 letters or more", 5),
+                        ],
+                        id="legal-min",
+                        value=3,
+                    )
+
+                    yield Label("Game timeout:")
+                    yield Select(
+                        [
+                            ("1 minute", 60),
+                            ("1.5 minutes", 90),
+                            ("2 minutes", 120),
+                            ("3 minutes", 180),
+                            ("4 minutes", 240),
+                            ("5 minutes", 300),
+                            ("7 minutes", 420),
+                            ("10 minutes", 600),
+                            ("No timeout", 0),
+                        ],
+                        prompt="Choose game timeout",
+                        id="timeout",
+                        value=180,
+                    )
+
+                    yield Label("Scores:")
+                    yield Select(
+                            [
+                                ("Flat: 1", 
+                                 (0, 0, 0, 1, 1, 1, 1, 1, 1,  1,  1,  1,  1,  1,   1,   1,   1)),
+                                ("Fibonnaci: 1-377", 
+                                 (0, 0, 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377)),
+                                ("Basic: 1-11", 
+                                 (0, 0, 0, 1, 1, 2, 3, 5, 11, 11, 11, 11, 11, 11, 11, 11, 11)),
+                                ("Prefer big: 1-50",
+                                 (0, 0, 0, 1, 1, 2, 4, 6, 9, 12, 16, 20, 25, 30, 36, 42, 50)),
+                                ],
+                            prompt="Choose scores",
+                            id="scores",
+                            value=(0, 0, 0, 1, 1, 2, 3, 5, 11, 11, 11, 11, 11, 11, 11, 11, 11),
+                    )
+
+            with Collapsible(title="Min/max options for board finding", collapsed=True):
+                with Container(id="adv"):
+                    for (id, label) in [
+                        ("words", "Number words:"),
+                        ("score", "Score:"),
+                        ("longest", "Longest word:"),
+                    ]:
+                        yield Label(label)
+                        yield Input(
+                            type="integer",
+                            id=f"min-{id}",
+                            value="0",
+                            max_length=4,
+                        )
+                        yield Input(
+                            type="integer",
+                            id=f"max-{id}",
+                            value="9999",
+                            max_length=4,
+                        )
+
+            with Horizontal(id="start-buttons"):
+                yield Button("Play", variant="success", id="play")
+                yield Button("Quit", variant="error", id="quit")
 
         yield Footer()
 
@@ -156,6 +176,7 @@ class Chooser(App):
                 max_score=int(self.query_one("#max-score").value),
                 min_longest=int(self.query_one("#min-longest").value),
                 max_longest=int(self.query_one("#max-longest").value),
+                scores=self.query_one("#scores").value,
             )
         self.app.exit(choices)
 

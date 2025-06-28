@@ -36,10 +36,6 @@ typedef struct {
 // Maximum board size is 6x6
 typedef short Dice[36];
 
-static const int WORD_SCORES[] = {
-    // 16 is the longest word in dict
-    0, 0, 0, 1, 1, 2, 3, 5, 11, 11, 11, 11, 11, 11, 11, 11, 11};
-
 // We only read the dawg on startup, and it's shared among all boards.
 const int32_t *dawg;
 
@@ -84,7 +80,6 @@ void read_dawg(const char *path) {
     dawg = f2 + 1;
 }
 #endif
-
 
 
 /****************************** BOARD *****************************/
@@ -407,7 +402,6 @@ int fill_board(Board *board, int max_tries){
 }
 
 
-
 struct WalkData {
     char **words;
     int marker;
@@ -473,13 +467,11 @@ char **get_words(
         max_score,
         min_longest,
         max_longest,
-	min_legal
+        min_legal
     );
-    //printf("min_legal %d\n", b->min_legal);
 
     *num_tries = fill_board(b, max_tries);
     *dice_simple = b->dice_simple;
-//    fprintf(stderr, "=%s\n", *dice_simple);
     bws_btree_to_array(b);
     b->word_array[b->num_words] = NULL;
     return b->word_array;

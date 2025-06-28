@@ -24,7 +24,6 @@ def _find_libwords():
 
 c_words = cdll.LoadLibrary(_find_libwords())
 
-WORD_SCORES = [0, 0, 0, 1, 1, 2, 3, 5, 11, 11, 11, 11, 11, 11, 11, 11, 11]
 
 
 def read_dawg(path: str) -> None:
@@ -56,16 +55,18 @@ class WordList:
     words: set[str]
     longest: int
     score: int
+    scores: list[int]
 
-    def __init__(self):
+    def __init__(self, scores):
         self.words = set()
         self.longest = 0
         self.score = 0
+        self.scores = scores
 
     def add(self, word: str):
         self.words.add(word)
         self.longest = max(self.longest, len(word))
-        self.score += WORD_SCORES[len(word)]
+        self.score += self.scores[len(word)]
 
 
 class GuessResult(Enum):
@@ -91,19 +92,17 @@ class Game:
             dice_set: DiceSet,
             height: int,
             width: int,
-            scores=None,
+            scores: list[int],
             duration=120,
             min_legal=3,
     ):
-        if scores is None:
-            scores = WORD_SCORES
         self.dice_set = dice_set
         self.height = height
         self.width = width
         self.scores = scores
-        self.legal = WordList()
-        self.found = WordList()
-        self.bad = WordList()
+        self.legal = WordList(scores)
+        self.found = WordList(scores)
+        self.bad = WordList(scores)
         self.board = []
         self.duration = duration
         self.min_legal = min_legal
