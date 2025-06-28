@@ -5,7 +5,7 @@ import dataclasses
 from textual import on
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Container
-from textual.widgets import Input, Label, Button, Header, Select, Collapsible
+from textual.widgets import Input, Label, Button, Header, Select, Collapsible, Footer
 from textual.binding import Binding
 
 from dice import sets
@@ -24,19 +24,22 @@ class Choices:
 
 
 class Chooser(App):
-    TITLE = "MothWords"
+    TITLE = "Boggle"
     CSS = ("""
+    
     #main {
+    max-width: 60;
     layout: grid;
     grid-size: 2;
     grid-columns: 2fr 3fr;
     height: 9;
     }
     #adv {
+    max-width: 60;
         layout: grid;
         grid-size: 3;
         height: 6;
-        grid-columns: 1fr 1fr 1fr;
+        grid-columns: 2fr 1fr 2fr;
     }
     #main Label {
         width: 100%;
@@ -50,8 +53,9 @@ class Chooser(App):
     #main Input, #adv Input {
         border: none;
         border-bottom: solid $primary;
-        margin-left: 1;
+        margin-left: 3;
         padding-left: 0;
+        width: 5;
     }
     #start-buttons {
         margin-top: 1;
@@ -63,10 +67,12 @@ class Chooser(App):
 
     BINDINGS = [
         Binding("p", "play"),
-        Binding("ctrl+p", "play"),
+        Binding("ctrl+p", "play", "Play"),
         Binding("q", "quit"),
-        Binding("ctrl+q", "quit"),
+        Binding("ctrl+q", "quit", "Quit"),
     ]
+
+    ENABLE_COMMAND_PALETTE = False
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -122,17 +128,21 @@ class Chooser(App):
                     yield Input(
                         type="integer",
                         id=f"min-{id}",
-                        value="0"
+                        value="0",
+                        max_length=4,
                     )
                     yield Input(
                         type="integer",
                         id=f"max-{id}",
                         value="9999",
+                        max_length=4,
                     )
 
         with Horizontal(id="start-buttons"):
             yield Button("Play", variant="success", id="play")
             yield Button("Quit", variant="error", id="quit")
+
+        yield Footer()
 
     @on(Button.Pressed, "#play")
     def action_play(self):
