@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
+from pathlib import Path
+import pickle
 
 from textual import on
 from textual.app import App, ComposeResult
@@ -21,8 +23,25 @@ class Choices:
     max_score: int
     min_longest: int
     max_longest: int
-    scores: list[int]
+    scores: tuple[int]
 
+PREF_FILE = Path.home() / "tboggle-prefs.pickle"
+if not (PREF_FILE).exists():
+    defaults = Choices(
+            set="4",
+            legal_min=3,
+            timeout=180,
+            min_words=0,
+            max_words=9999,
+            min_score=0,
+            max_score=9999,
+            min_longest=0,
+            max_longest=16,
+            scores=(0, 0, 0, 1, 1, 2, 3, 5, 11, 11, 11, 11, 11, 11, 11, 11, 11),
+    )
+else:
+    with open(PREF_FILE, "rb") as f:
+        defaults = pickle.load(f)
 
 class Chooser(App):
     TITLE = "Boggle"
@@ -88,7 +107,7 @@ class Chooser(App):
                         ((s.desc, s.name) for s in sets),
                         id="set",
                         prompt="Choose cube set",
-                        value="4",
+                        value=defaults.set,
                     )
 
                     yield Label("Legal words:")
@@ -99,7 +118,7 @@ class Chooser(App):
                             ("5 letters or more", 5),
                         ],
                         id="legal-min",
-                        value=3,
+                        value=defaults.legal_min,
                     )
 
                     yield Label("Game timeout:")
@@ -117,7 +136,7 @@ class Chooser(App):
                         ],
                         prompt="Choose game timeout",
                         id="timeout",
-                        value=180,
+                        value=defaults.timeout,
                     )
 
                     yield Label("Scores:")
@@ -134,7 +153,7 @@ class Chooser(App):
                                 ],
                             prompt="Choose scores",
                             id="scores",
-                            value=(0, 0, 0, 1, 1, 2, 3, 5, 11, 11, 11, 11, 11, 11, 11, 11, 11),
+                            value=defaults.scores,
                     )
 
             with Collapsible(title="Min/max options for board finding", collapsed=True):
@@ -148,41 +167,50 @@ class Chooser(App):
                         yield Input(
                             type="integer",
                             id=f"min-{id}",
-                            value="0",
+                            value=str(getattr(defaults, f"min_{id}")),
                             max_length=4,
                         )
                         yield Input(
                             type="integer",
                             id=f"max-{id}",
-                            value="9999",
+                            value=str(getattr(defaults, f"max_{id}")),
                             max_length=4,
                         )
 
             with Horizontal(id="start-buttons"):
                 yield Button("Play", variant="success", id="play")
+                yield Button("Save as Default", id="save")
                 yield Button("Quit", variant="error", id="quit")
 
         yield Footer()
 
+    def set_to_defaults(self):
+        defaults.set=self.query_one("#set").value
+        defaults.legal_min=int(self.query_one("#legal-min").value)
+        defaults.timeout=int(self.query_one("#timeout").value)
+        defaults.min_words=int(self.query_one("#min-words").value)
+        defaults.max_words=int(self.query_one("#max-words").value)
+        defaults.min_score=int(self.query_one("#min-score").value)
+        defaults.max_score=int(self.query_one("#max-score").value)
+        defaults.min_longest=int(self.query_one("#min-longest").value)
+        defaults.max_longest=int(self.query_one("#max-longest").value)
+        defaults.scores=self.query_one("#scores").value
+
     @on(Button.Pressed, "#play")
     def action_play(self):
-        choices = Choices(
-                set=self.query_one("#set").value,
-                legal_min=int(self.query_one("#legal-min").value),
-                timeout=int(self.query_one("#timeout").value),
-                min_words=int(self.query_one("#min-words").value),
-                max_words=int(self.query_one("#max-words").value),
-                min_score=int(self.query_one("#min-score").value),
-                max_score=int(self.query_one("#max-score").value),
-                min_longest=int(self.query_one("#min-longest").value),
-                max_longest=int(self.query_one("#max-longest").value),
-                scores=self.query_one("#scores").value,
-            )
-        self.app.exit(choices)
+        self.set_to_defaults()
+        self.app.exit(defaults)
 
     @on(Button.Pressed, "#quit")
     def action_quit(self):
         self.app.exit(False)
+
+    @on(Button.Pressed, "#save")
+    def action_save(self):
+        self.set_to_defaults()
+        with open(PREF_FILE, "wb") as prefs:
+            pickle.dump(defaults, prefs)
+        self.notify(f"Saved to {PREF_FILE}", title="Saved")
 
 if __name__ == "__main__":
     app = Chooser()
