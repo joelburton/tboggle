@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "tboggle"
 version = "0.1.0"
@@ -9,3 +13,12 @@ dependencies = [
     "textual>=3.3.0",
     "textual-dev>=1.7.0",
 ]
+
+[project.scripts]
+tboggle = "tboggle.boggle:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+tboggle = ["*.sqlite3", "*.dat", "*.so", "*.css"]
