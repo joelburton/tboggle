@@ -180,6 +180,7 @@ class Chooser(App):
             with Horizontal(id="start-buttons"):
                 yield Button("Play", variant="success", id="play")
                 yield Button("Save as Default", id="save")
+                yield Button("Restore Game", id="restore")
                 yield Button("Quit", variant="error", id="quit")
 
         yield Footer()
@@ -199,7 +200,7 @@ class Chooser(App):
     @on(Button.Pressed, "#play")
     def action_play(self):
         self.set_to_defaults()
-        self.app.exit(defaults)
+        self.app.exit((defaults, "play"))
 
     @on(Button.Pressed, "#quit")
     def action_quit(self):
@@ -211,6 +212,12 @@ class Chooser(App):
         with open(PREF_FILE, "wb") as prefs:
             pickle.dump(defaults, prefs)
         self.notify(f"Saved to {PREF_FILE}", title="Saved")
+
+    @on(Button.Pressed, "#restore")
+    def action_restore(self):
+        self.set_to_defaults()
+        self.app.exit((defaults, "restore"))
+
 
 if __name__ == "__main__":
     app = Chooser()

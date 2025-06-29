@@ -375,19 +375,26 @@ def main():
     choices: Choices = None
     while True:
         if not choices:
-            choices = Chooser().run()
-            if not choices: break
+            result = Chooser().run()
+            if not result: break
+        choices, start_by = result
 
         set =  DiceSet.get_by_name(choices.set)
         game = Game(set, set.num, set.num, duration=choices.timeout, min_legal=choices.legal_min, scores=choices.scores)
-        game.fill_board(
-            min_words=choices.min_words,
-            max_words=choices.max_words,
-            min_score=choices.min_score,
-            max_score=choices.max_score,
-            min_longest=choices.min_longest,
-            max_longest=choices.max_longest,
-        )
+        if start_by == "restore":
+            dice = [ 65, 65, 65, 65, 66, 66, 66, 66 ,67, 67, 67, 67, 69,69,69,69]
+            #g = Game(DiceSet.get_by_name("4"), 4, 4, scores)
+            game.restore_game(dice)
+            #game.restore_game()
+        else:
+            game.fill_board(
+                min_words=choices.min_words,
+                max_words=choices.max_words,
+                min_score=choices.min_score,
+                max_score=choices.max_score,
+                min_longest=choices.min_longest,
+                max_longest=choices.max_longest,
+            )
         app = BoggleApp(game)
         rez = app.run()
         if rez == "board":

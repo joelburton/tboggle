@@ -2,10 +2,11 @@ import sqlite3
 import os
 import glob
 from random import randint
-from ctypes import cdll, POINTER, c_int, c_char_p, byref
+from ctypes import cdll, POINTER, c_int, c_short, c_char_p, byref
 from enum import Enum
 
 from tboggle.dice import DiceSet
+
 
 # Find the compiled extension in the package directory
 def _find_libwords():
@@ -107,6 +108,34 @@ class Game:
         self.duration = duration
         self.min_legal = min_legal
 
+    def restore_game(self, dice: list[int]):
+        score_arr_type = c_int * len(self.scores)
+        dice_arr_type = c_short * len(dice)
+
+        c_words.restore_game.restype = POINTER(c_char_p)
+
+        print(dice)
+        words_p = c_words.restore_game(
+            score_arr_type(*self.scores),
+            self.width, self.height,
+            dice_arr_type(*dice),
+        )
+
+        i = 0
+        while words_p[i]:
+            self.legal.add(words_p[i].decode('utf-8'))
+            i += 1
+
+        print(self.legal.words)
+
+        for y in range(self.height):
+            row = []
+            for x in range(self.width):
+                face = chr(dice[y * self.width + x])
+                row.append(self.dice_set.get_face_display(face))
+            self.board.append(row)
+        print(self.board)
+
     def fill_board(
             self,
             min_words: int = 1,
@@ -172,3 +201,10 @@ class Game:
 
 # c_words.free_words.argtypes = [POINTER(c_char_p)]
 # c_words.free_words(words_p)
+
+if __name__ == "__main__":
+    scores=(0, 0, 0, 1, 1, 2, 3, 5, 11, 11, 11, 11, 11, 11, 11, 11, 11)
+    dice = [ 65, 65, 65, 65, 66, 66, 66, 66 ,67, 67, 67, 67, 69,69,69,69]
+    g = Game(DiceSet.get_by_name("4"), 4, 4, scores)
+    g.restore_game(dice)
+

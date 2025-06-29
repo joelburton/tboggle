@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include <search.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +29,6 @@ exit(1); \
 
 typedef struct {
     const char *word;
-    bool found;
     int len;
 } BoardWord;
 
@@ -47,28 +45,6 @@ const int32_t *dawg;
  * @param path
  */
 
-#if __linux__
-#include <sys/mman.h>
-void read_dawg(const char *path) {
-    const int fd = open(path, O_RDONLY);
-    if (fd < 0) FATAL2("Cannot open dict at", path);
-
-    int32_t nelems;
-    if (read(fd, &nelems, 4) < 4) FATAL2("Cannot get size of", path);
-
-    int32_t *f = mmap(
-        NULL,
-        (size_t) nelems * 4,
-        PROT_READ,
-        MAP_PRIVATE,
-        fd,
-        0);
-    if (f == MAP_FAILED) FATAL2("Cannot read dict at", path);
-
-    // Skip over the first integer, which was the # of dawg items
-    dawg = f + 1;
-}
-#else
 void read_dawg(const char *path) {
     FILE *f = fopen(path, "rb");
     int32_t nelems;
@@ -80,7 +56,6 @@ void read_dawg(const char *path) {
     if (fread(f2, size, 1, f) != 1) FATAL2("Cannot read dict at", path);
     dawg = f2 + 1;
 }
-#endif
 
 
 /****************************** BOARD *****************************/
@@ -212,7 +187,6 @@ static enum ADD_RESULT add_word(
     // ReSharper disable once CppDFAMemoryLeak
     BoardWord *b_word = malloc(sizeof(BoardWord));
     b_word->word = word;
-    b_word->found = false;
     b_word->len = length;
 
     BoardWord **found = tsearch(
@@ -408,21 +382,6 @@ struct WalkData {
     int marker;
 };
 
-#if __linux__
-void btree_callback(const void *n, const VISIT value, void *data) {
-    if (value == leaf || value == postorder) {
-        struct WalkData *walker = data;
-        BoardWord *bw = *(BoardWord **)n;
-        walker->words[walker->marker++] = bw->word;
-    }
-}
-
-void bws_btree_to_array(Board *board) {
-    board->word_array = malloc(((board->num_words + 1) * sizeof(BoardWord*)));
-    struct WalkData walker = {board->word_array, 0};
-    twalk_r(board->legal, btree_callback, &walker);
-}
-#else
 struct WalkData *walker;
 void btree_callback(const void *n, const VISIT value, int depth) {
     if (value == leaf || value == postorder) {
@@ -437,7 +396,6 @@ void bws_btree_to_array(Board *board) {
     walker = &w;
     twalk(board->legal, btree_callback);
 }
-#endif
 
 char **get_words(
     char *set[],
@@ -473,6 +431,34 @@ char **get_words(
 
     *num_tries = fill_board(b, max_tries);
     *dice_simple = b->dice_simple;
+    bws_btree_to_array(b);
+    b->word_array[b->num_words] = NULL;
+    return b->word_array;
+}
+
+char **restore_game(
+    int score_counts[],
+    int width,
+    int height,
+    Dice dice
+) {
+    Board *b = malloc(sizeof(Board));
+    b->score_counts = score_counts;
+    b->width = width;
+    b->height = height;
+    b->min_words = 0;
+    b->max_words = INT32_MAX;
+    b->min_score = 0;
+    b->max_score = INT32_MAX;
+    b->min_longest = 0;
+    b->max_longest = INT32_MAX;
+    b->min_legal = 0;
+    b->score = 0;
+    memcpy(b->dice, dice, sizeof(short) * 36);
+    // b->dice = dice;
+
+    printf("1\n");
+    find_all_words(b);
     bws_btree_to_array(b);
     b->word_array[b->num_words] = NULL;
     return b->word_array;
