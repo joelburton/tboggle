@@ -102,10 +102,6 @@ class StatusArea(Container):
         yield Label(score, classes="status-r", id="num-score")
 
 
-class ActiveList(Static):
-    pass
-
-
 @dataclasses.dataclass
 class Page:
     rows: list[list[str]]
@@ -126,7 +122,7 @@ class Results(DataTable):
             self.show_page(self.cur_page_num - 1)
 
     def on_data_table_cell_highlighted(self, event):
-        if not self.disabled and event.value:
+        if not self.app.playing and event.value:
             word = event.value
             defn = escape(get_def(word) or "(nothing found)")
             self.app.query_one("#def-area").update(f"[u]{word}[/]: [i]{defn}[/]")
@@ -168,7 +164,8 @@ class Results(DataTable):
         if p.rows:
             self.add_columns(*(f"c{x:{p.col_width}}" for x in p.rows[0]))
             self.add_rows(p.rows)
-        self.focus()
+        if not self.app.playing:
+            self.focus()
 
 
 class PauseModal(ModalScreen):
@@ -318,9 +315,6 @@ class BoggleApp(App):
                 return False
         return True
 
-    # def action_again(self):
-    #     self.exit(True)
-
     def action_quit(self) -> None:
         """Called when the user hits Ctrl+Q."""
         self.push_screen(ExitModal())
@@ -358,7 +352,6 @@ class BoggleApp(App):
         found = self.query_one(Results)
         found.make_list("Found", self.game.found.words)
         found.cursor_type = "none"
-        found.disabled = True
         f = self.game.found
         self.query_one("#num-score").update(str(f.score))
         self.query_one("#num-words").update(str(len(f.words)))
