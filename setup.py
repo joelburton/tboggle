@@ -2,10 +2,9 @@ from setuptools import setup, Extension
 
 # Define the extension module
 libwords = Extension(
-    'tboggle/libwords',
-    sources=['src/tboggle/libwords.c'],  # Adjust the source path according to your project structure
-    extra_compile_args=['-fPIC'],
-    # extra_link_args=['-shared']
+    'tboggle.libwords',
+    sources=['libwords.c'],
+    # extra_compile_args=['-fPIC'],
 )
 
 setup(

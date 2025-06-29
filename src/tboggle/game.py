@@ -8,37 +8,27 @@ from enum import Enum
 from tboggle.dice import DiceSet
 
 
-# Find the compiled extension in the package directory
 def _find_libwords():
-    # Get the directory where this module is located
+    """Find libwords shared object."""
     module_dir = os.path.dirname(__file__)
-
-    # Look for the compiled extension with the platform-specific name
     pattern = os.path.join(module_dir, "libwords*.so")
     matches = glob.glob(pattern)
-
-    if matches:
-        return matches[0]
-
-    # Fallback to the old relative path for development
-    return "./libwords.so"
+    return matches[0]
 
 c_words = cdll.LoadLibrary(_find_libwords())
-
-
 
 def read_dawg(path: str) -> None:
     c_words.read_dawg(c_char_p(path.encode("utf8")))
 
-# Find data files in the package directory
 def _find_data_file(filename):
+    """Find data file in package."""
     module_dir = os.path.dirname(__file__)
     package_path = os.path.join(module_dir, filename)
 
     if os.path.exists(package_path):
         return package_path
 
-    # Fallback to relative path for development
+    print(f"Warning: using local copy {filename}")
     return filename
 
 read_dawg(_find_data_file("words.dat"))
@@ -65,7 +55,7 @@ class WordList:
         self.scores = scores
 
     def add(self, word: str):
-        self.words.add(word)
+        self.words.add(word.lower())
         self.longest = max(self.longest, len(word))
         self.score += self.scores[len(word)]
 
@@ -108,33 +98,18 @@ class Game:
         self.duration = duration
         self.min_legal = min_legal
 
-    def restore_game(self, dice: list[int]):
+    def restore_game(self, dice: str):
         score_arr_type = c_int * len(self.scores)
-        dice_arr_type = c_short * len(dice)
 
         c_words.restore_game.restype = POINTER(c_char_p)
 
-        print(dice)
         words_p = c_words.restore_game(
             score_arr_type(*self.scores),
             self.width, self.height,
-            dice_arr_type(*dice),
+            c_char_p(dice.encode("UTF8")),
         )
 
-        i = 0
-        while words_p[i]:
-            self.legal.add(words_p[i].decode('utf-8'))
-            i += 1
-
-        print(self.legal.words)
-
-        for y in range(self.height):
-            row = []
-            for x in range(self.width):
-                face = chr(dice[y * self.width + x])
-                row.append(self.dice_set.get_face_display(face))
-            self.board.append(row)
-        print(self.board)
+        self._finish(dice, words_p)
 
     def fill_board(
             self,
@@ -171,12 +146,14 @@ class Game:
             byref(board_str_b)
         )
 
+        self._finish(board_str_b.value.decode('utf-8'), words_p)
+
+    def _finish(self, board_str, words):
         i = 0
-        while words_p[i]:
-            self.legal.add(words_p[i].decode('utf-8'))
+        while words[i]:
+            self.legal.add(words[i].decode('utf-8'))
             i += 1
 
-        board_str = board_str_b.value.decode('utf-8')
         for y in range(self.height):
             row = []
             for x in range(self.width):
@@ -204,7 +181,8 @@ class Game:
 
 if __name__ == "__main__":
     scores=(0, 0, 0, 1, 1, 2, 3, 5, 11, 11, 11, 11, 11, 11, 11, 11, 11)
-    dice = [ 65, 65, 65, 65, 66, 66, 66, 66 ,67, 67, 67, 67, 69,69,69,69]
+    dice = "QUATEXXEXXXXXXXX"
     g = Game(DiceSet.get_by_name("4"), 4, 4, scores)
     g.restore_game(dice)
+    print(g.legal.words)
 
