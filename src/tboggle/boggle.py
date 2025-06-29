@@ -50,6 +50,33 @@ class LeftPane(Vertical):
 
 class WordInput(Input):
     app: BoggleApp
+    history: list[str]
+    history_at: int
+
+    BINDINGS = [
+            Binding("up", "up"),
+            Binding("down", "down"),
+            ]
+
+    def on_mount(self):
+        self.history = []
+        self.history_at = 0
+
+    def action_up(self):
+        if self.history_at > 0:
+            self.history_at -= 1
+            self.value = self.history[self.history_at]
+            self.cursor_position = len(self.value)
+
+    def action_down(self):
+        if self.history_at < len(self.history) - 1:
+            self.history_at += 1
+            self.value = self.history[self.history_at]
+            self.cursor_position = len(self.value)
+        else:
+            self.value = ""
+            self.cursor_position = 0
+            self.history_at = len(self.history) 
 
     @on(Input.Submitted)
     def submitted(self, event):
@@ -63,6 +90,8 @@ class WordInput(Input):
         elif result == GuessResult.DUP:
             self.classes = "dup"
         self.value = ""
+        self.history.append(event.value)
+        self.history_at = len(self.history)
 
     @on(Input.Changed)
     def reset_color_on_entry(self, event):
