@@ -114,10 +114,11 @@ class Page:
     total_words: int
 
 class Results(DataTable):
-    def __init__(self):
+    def on_mount(self):
         self.cur_page_num = 1
         self.pages = []
-        super().__init__()
+        if not self.app.playing:
+            self.make_stats()
 
     def on_key(self, event):
         if event.key == "space" and self.cur_page_num < len(self.pages):
@@ -150,6 +151,7 @@ class Results(DataTable):
         self.show_page(1)
 
     def show_page(self, num: int):
+        self.disabled = False
         self.cur_page_num = num
         p = self.pages[num - 1]
         has_next = num < len(self.pages)
@@ -170,6 +172,22 @@ class Results(DataTable):
             self.add_rows(p.rows)
         self.focus()
 
+    def make_stats(self):
+        self.border_title = "Stats"
+        self.border_subtitle = ""
+        self.clear(columns=True)
+        self.add_columns("Metric", "Value")
+        self.header_height = 0
+        g = self.app.game
+        self.add_rows([
+            ("Dice Set", "Name Here"),
+            ("Scoring", "Name Here"),
+            ("", "/".join(str(s) for s in g.scores)),
+            ("Words", f"{(len(g.found.words) / len(g.legal.words)):.2%}"),
+            ("Score", f"{(g.found.score / g.legal.score):.2%}"),
+        ])
+        self.disabled = True
+        
 
 class PauseModal(ModalScreen):
     BINDINGS = [Binding("escape", "dismiss"), Binding("ctrl+q", "dismiss")]
@@ -283,6 +301,7 @@ class BoggleApp(App):
         if self.game.duration:
             self.my_timer.stop()
         self.playing = False
+        self.action_stats()
 
     def compose(self):
         with Horizontal():
@@ -347,10 +366,7 @@ class BoggleApp(App):
         self.query_one(Results).make_list("Bad", self.game.bad.words)
 
     def action_stats(self):
-        fl = self.query_one(Results)
-        fl.border_title = "Stats"
-        fl.border_subtitle = ""
-        fl.clear()
+        self.query_one(Results).make_stats()
 
     # -------------------------------
 
