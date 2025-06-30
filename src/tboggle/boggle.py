@@ -152,7 +152,7 @@ class Results(DataTable):
             self.show_page(self.cur_page_num - 1)
 
     def on_data_table_cell_highlighted(self, event):
-        if not self.app.playing and event.value:
+        if not self.disabled and event.value:
             word = event.value
             defn = escape(get_def(word) or "(nothing found)")
             self.app.query_one("#def-area").update(f"[u]{word}[/]: [i]{defn}[/]")
