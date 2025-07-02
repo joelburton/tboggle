@@ -89,6 +89,8 @@ class WordInput(Input):
             self.classes = "bad"
         elif result == GuessResult.DUP:
             self.classes = "dup"
+        elif result == GuessResult.NOT_ON_BOARD:
+            self.classes = "not-on-board"
         self.value = ""
         self.history.append(event.value)
         self.history_at = len(self.history)

@@ -25,6 +25,10 @@ WordInput.good {
     border-bottom: solid $success;
 }
 
+WordInput.not-on-board {
+    border: thick red;
+}
+
 Log { 
     height: 1fr; 
     border: solid gray; 

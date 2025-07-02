@@ -63,6 +63,7 @@ class GuessResult(Enum):
     GOOD = 0
     BAD = 1
     DUP = 2
+    NOT_ON_BOARD = 3
 
 
 class Game:
@@ -169,6 +170,8 @@ class Game:
         elif word in self.legal.words:
             self.found.add(word)
             return GuessResult.GOOD
+        elif get_def(word) == "":
+            return GuessResult.NOT_ON_BOARD
         else:
             self.bad.add(word)
             return GuessResult.BAD
