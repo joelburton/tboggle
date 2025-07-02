@@ -92,6 +92,7 @@ class WordInput(Input):
         self.value = ""
         self.history.append(event.value)
         self.history_at = len(self.history)
+        self.placeholder = word
 
     @on(Input.Changed)
     def reset_color_on_entry(self, event):
@@ -155,7 +156,8 @@ class Results(DataTable):
         if not self.disabled and event.value and not self.app.playing:
             word = event.value
             defn = escape(get_def(word) or "(nothing found)")
-            self.app.query_one("#def-area").update(f"[u]{word}[/]: [i]{defn}[/]")
+            score = self.app.game.scores[len(word)]
+            self.app.query_one("#def-area").update(f"[u]{word} ({score})[/]: [i]{defn}[/]")
 
     def make_list(self, title, words_set):
         self.header_height = 0

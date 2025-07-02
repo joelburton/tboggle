@@ -118,7 +118,7 @@ class Game:
             max_score: int = -1,
             min_longest: int = 3,
             max_longest: int = -1,
-            max_tries: int = 10_000,
+            max_tries: int = 100_000,
             random_seed: int = None,
     ):
         if random_seed is None:
