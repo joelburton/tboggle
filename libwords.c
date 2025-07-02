@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include "tree.c"
+
 #define CHILD_BIT_SHIFT 10
 #define EOW_BIT_MASK 0X00000200
 #define EOL_BIT_MASK 0X00000100
@@ -29,9 +31,9 @@ perror(err_msg); \
 exit(1); \
 }
 
-typedef struct {
-    const char *word;
-} BoardWord;
+// typedef struct {
+//    const char *word;
+//} BoardWord;
 
 // Maximum board size is 6x6 -- plus one for '\0' at end
 typedef char Dice[37];
@@ -117,55 +119,6 @@ void make_dice(Board *b) {
     }
 }
 
-/** Compare board words using the actual word. */
-
-static int boardwords_cmp(const void *a,
-                          const void *b) {
-    const BoardWord *aa = a;
-    const BoardWord *bb = b;
-    return strcmp(aa->word, bb->word);
-}
-
-enum ADD_RESULT {
-    ADD_ADDED,
-    ADD_DUP,
-    ADD_FAIL,
-};
-
-/** Add word to the tree of legal words.
- *
- * Returns T/F if it is new.
- *
- */
-
-static enum ADD_RESULT add_word(
-    Board *board, const char word[], const int length)
-{
-    // ReSharper disable once CppDFAMemoryLeak
-    BoardWord *b_word = malloc(sizeof(BoardWord));
-    b_word->word = word;
-
-    BoardWord **found = tsearch(
-        b_word, (void **) &board->legal, boardwords_cmp);
-
-    // if already in tree, return false -- it's a dup
-    if (*found != b_word) {
-        free(b_word);
-        return ADD_DUP;
-    }
-
-    board->num_words++;
-    if (board->num_words > board->max_words) return ADD_FAIL;
-
-    board->score += board->score_counts[length];
-    if (board->score > board->max_score) return ADD_FAIL;
-
-    b_word->word = strdup(word);   // know we'll keep it, so copy it
-    if (length > board->longest) board->longest = length;
-    // ReSharper disable once CppDFAMemoryLeak
-    return ADD_ADDED;
-}
-
 /** Find all words starting from this tile and DAWG-pointer.
  *
  * This is a recursive function -- it is given a tile (via y and x)
@@ -201,17 +154,20 @@ static bool find_words( // NOLINT(*-no-recursion)
         const int x,
         int_least64_t used)
 {
+    const int h = board->height;
+    const int w = board->width;
+
     // If not a legal tile, can't make word here
-    if (y < 0 || y >= board->height || x < 0 || x >= board->width) return true;
+    // if (y < 0 || y >= h || x < 0 || x >= w) return true;
 
     // Make a bitmask for this tile position
-    const int_least64_t mask = 0x1 << (y * board->width + x);
+    const int_least64_t mask = 0x1 << (y * w + x);
 
     // If we've already used this tile, can't make word here
     if (used & mask) return true;
 
     // Find the DAWG-node for existing-DAWG-node plus this letter.
-    const char sought = board->dice[y * board->width + x];
+    const char sought = board->dice[y * w + x];
 
     if (sought >= 'A') {
         while (i != 0 && DAWG_LETTER(dawg, i) != sought) i = DAWG_NEXT(dawg, i);
@@ -267,24 +223,50 @@ static bool find_words( // NOLINT(*-no-recursion)
     // Add this word to the found-words.
     if (DAWG_EOW(dawg, i) && word_len >= board->min_legal) {
         word[word_len] = '\0';
-        if (add_word(board, word, word_len) == ADD_FAIL) return false;
+
+        if (insert(word)) {
+            board->num_words++;
+            if (board->num_words > board->max_words) return false;
+
+            board->score += board->score_counts[word_len];
+            if (board->score > board->max_score) return false;
+
+            if (word_len > board->longest) board->longest = word_len;
+        }
     }
 
     // Check every direction H/V/D from here (will also re-check this tile, but
     // the can't-reuse-this-tile rule prevents it from actually succeeding)
-    for (int di = -1; di < 2; di++) {
-        for (int dj = -1; dj < 2; dj++) {
-            if (!find_words(
-                board,
-                DAWG_CHILD(dawg, i),
-                word,
-                word_len,
-                y + di,
-                x + dj,
-                used
-            )) return false;
-        }
+
+    const int my = h - 1;
+    const int mx = w - 1;
+    const unsigned int child = DAWG_CHILD(dawg, i);
+    if (y > 0) {
+        if (x > 0 && !find_words(board, child, word, word_len, y - 1, x - 1, used)) return false;
+        if (!find_words(board, child, word, word_len, y - 1, x, used)) return false;
+        if (x < mx && !find_words(board, child, word, word_len, y - 1, x + 1, used)) return false;
     }
+    if (x > 0 && !find_words(board, child, word, word_len, y, x - 1, used)) return false;
+    if (x < mx && !find_words(board, child, word, word_len, y, x + 1, used)) return false;
+    if (y < mx) {
+        if (x > 0 && !find_words(board, child, word, word_len, y + 1, x - 1, used)) return false;
+        if (!find_words(board, child, word, word_len, y + 1, x, used)) return false;
+        if (x < mx && !find_words(board, child, word, word_len, y + 1, x + 1, used)) return false;
+    }
+
+    //for (int di = -1; di < 2; di++) {
+    //    for (int dj = -1; dj < 2; dj++) {
+    //        if (!find_words(
+    //            board,
+    //            DAWG_CHILD(dawg, i),
+    //            word,
+    //            word_len,
+    //            y + di,
+    //            x + dj,
+    //            used
+    //        )) return false;
+    //    }
+    //}
     return true;
 }
 
@@ -295,6 +277,7 @@ static bool find_words( // NOLINT(*-no-recursion)
  **/
 
 bool find_all_words(Board *b) {
+    tree_end = 0;
     b->num_words = 0;
     b->longest = 0;
     b->score = 0;
@@ -338,31 +321,38 @@ int fill_board(Board *board, int max_tries){
     int count = 0;
     while (count++ < max_tries) {
         make_dice(board);
-        if (find_all_words(board)) break;
+        if (find_all_words(board)) return count;
     }
-    return count;
+    return -1;
         // free_words(board);
 }
 
 
-struct WalkData {
-    char **words;
-    int marker;
-};
+//struct WalkData {
+//    char **words;
+//    int marker;
+//};
 
-struct WalkData *walker;
-void btree_callback(const void *n, const VISIT value, int depth) {
-    if (value == leaf || value == postorder) {
-        BoardWord *bw = *(BoardWord **)n;
-        walker->words[walker->marker++] = bw->word;
-    }
-}
+//struct WalkData *walker;
+//void btree_callback(const void *n, const VISIT value, int depth) {
+//    if (value == leaf || value == postorder) {
+//        BoardWord *bw = *(BoardWord **)n;
+//        walker->words[walker->marker++] = bw->word;
+//    }
+//}
+//
+//void bws_btree_to_array(Board *board) {
+//    board->word_array = malloc(((board->num_words + 1) * sizeof(BoardWord*)));
+//    struct WalkData w = {board->word_array, 0};
+//    walker = &w;
+//    twalk(board->legal, btree_callback);
+//}
 
 void bws_btree_to_array(Board *board) {
-    board->word_array = malloc(((board->num_words + 1) * sizeof(BoardWord*)));
-    struct WalkData w = {board->word_array, 0};
-    walker = &w;
-    twalk(board->legal, btree_callback);
+    tree_walk_i = 0;
+    tree_words = malloc(((board->num_words + 1) * sizeof(char *)));
+    walk();
+    board->word_array = tree_words;
 }
 
 /** Get words for a board matching these requirements.
@@ -409,7 +399,10 @@ char **get_words(
     b->min_legal = min_legal;
     b->score = 0;
 
-    *num_tries = fill_board(b, max_tries);
+    int tries = fill_board(b, max_tries);
+    if (tries == -1) return NULL;
+
+    *num_tries = tries;
     b->dice[width * height] = '\0';
     *dice_simple = b->dice;
     bws_btree_to_array(b);
@@ -442,5 +435,6 @@ char **restore_game(
     find_all_words(b);
     bws_btree_to_array(b);
     b->word_array[b->num_words] = NULL;
+
     return b->word_array;
 }

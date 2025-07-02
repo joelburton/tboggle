@@ -4,7 +4,7 @@ from setuptools import setup, Extension
 libwords = Extension(
     'tboggle.libwords',
     sources=['libwords.c'],
-    # extra_compile_args=['-fPIC'],
+    #extra_compile_args=['-O3'],
 )
 
 setup(

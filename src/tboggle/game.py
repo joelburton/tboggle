@@ -4,6 +4,7 @@ import glob
 from random import randint
 from ctypes import cdll, POINTER, c_int, c_short, c_char_p, byref
 from enum import Enum
+from collections import Counter
 
 from tboggle.dice import DiceSet
 
@@ -38,8 +39,6 @@ def get_def(word):
     r = db.execute(GET_WORD_SQL, [word.upper()])
     defn = r.fetchone()
     return "" if defn is None else defn[0]
-
-
 
 
 class WordList:
@@ -119,7 +118,7 @@ class Game:
             max_score: int = -1,
             min_longest: int = 3,
             max_longest: int = -1,
-            max_tries: int = 10000,
+            max_tries: int = 10_000,
             random_seed: int = None,
     ):
         if random_seed is None:
@@ -132,6 +131,8 @@ class Game:
         tried = c_int(0)
         board_str_b = c_char_p()
 
+        import time
+        t = time.time()
         words_p = c_words.get_words(
             dice_arr_type(*dice_bytes),
             score_arr_type(*self.scores),
@@ -145,6 +146,7 @@ class Game:
             byref(tried),
             byref(board_str_b)
         )
+        if (not words_p): raise Exception("didn't find")
 
         self._finish(board_str_b.value.decode('utf-8'), words_p)
 
@@ -174,6 +176,17 @@ class Game:
     def get_missed(self):
         return self.legal.words - self.found.words
 
+    def freqs(self):
+        legal = Counter(len(w) for w in self.legal.words)
+        found = Counter(len(w) for w in self.found.words)
+        both = []
+
+        for k in sorted(legal):
+            both.append((k, legal[k], found.get(k, 0)))
+        
+        return both
+
+
 
 
 # c_words.free_words.argtypes = [POINTER(c_char_p)]
@@ -181,8 +194,8 @@ class Game:
 
 if __name__ == "__main__":
     scores=(0, 0, 0, 1, 1, 2, 3, 5, 11, 11, 11, 11, 11, 11, 11, 11, 11)
-    dice = "QUATEXXEXXXXXXXX"
+    dice = "ADYERESTLPNAGIE1"
     g = Game(DiceSet.get_by_name("4"), 4, 4, scores)
     g.restore_game(dice)
-    print(g.legal.words)
+    print(len(g.legal.words))
 

@@ -152,7 +152,7 @@ class Results(DataTable):
             self.show_page(self.cur_page_num - 1)
 
     def on_data_table_cell_highlighted(self, event):
-        if not self.disabled and event.value:
+        if not self.disabled and event.value and not self.app.playing:
             word = event.value
             defn = escape(get_def(word) or "(nothing found)")
             self.app.query_one("#def-area").update(f"[u]{word}[/]: [i]{defn}[/]")
@@ -202,7 +202,7 @@ class Results(DataTable):
         self.border_title = "Stats"
         self.border_subtitle = ""
         self.clear(columns=True)
-        self.add_columns("Metric", "Value")
+        self.add_columns("Metric", "Value", "More")
         self.header_height = 0
         g = self.app.game
         self.add_rows([
@@ -211,6 +211,11 @@ class Results(DataTable):
             ("", "/".join(str(s) for s in g.scores)),
             ("Words", f"{(len(g.found.words) / len(g.legal.words)):.2%}"),
             ("Score", f"{(g.found.score / g.legal.score):.2%}"),
+        ])
+        self.add_rows([
+            ("",""),
+            ("[orange]Freq Legal[/]", "[orange]Found[/]"),
+            *((f"{c[0]:2}: {c[1]:3}", f"{c[2]:3}") for c in g.freqs()),
         ])
         self.disabled = True
         

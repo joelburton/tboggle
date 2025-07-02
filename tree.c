@@ -26,7 +26,7 @@ bool insert(char *word) {
 
     int current = 1;
     while (true) {
-        int comp = strcmp(word, tree[current].word);
+        const int comp = strcmp(word, tree[current].word);
         if (comp < 0) {
             if (tree[current].left == 0) {
                 tree[current].left = ++tree_end;
@@ -49,20 +49,26 @@ bool insert(char *word) {
     }
 }
 
-void inorderTraversal(int i) {
+char **tree_words;
+int tree_walk_i;
+
+void inorderTraversal(const int i) {
     if (i != 0) {
         inorderTraversal(tree[i].left);
-        printf("%s\n", tree[i].word);
+        tree_words[tree_walk_i] = tree[i].word;
+        tree_walk_i += 1;
         inorderTraversal(tree[i].right);
     }
 }
 
 
 void walk() {
+    tree_walk_i = 0;
     inorderTraversal(1);
 }
 
 int main() {
+    tree_words = malloc(1000);
     printf("%d\n", insert("apple"));
     printf("%d\n", insert("berry"));
     printf("%d\n", insert("apple"));
