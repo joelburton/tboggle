@@ -146,7 +146,7 @@ class Game:
             byref(tried),
             byref(board_str_b)
         )
-        if (not words_p): raise Exception("didn't find")
+        if (not words_p): raise Exception(f"didn't find: {time.time() - t}")
 
         self._finish(board_str_b.value.decode('utf-8'), words_p)
 
