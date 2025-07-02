@@ -185,18 +185,23 @@ static bool find_words( // NOLINT(*-no-recursion)
             case '0':
                 t1 = '_';
                 t2 = '_';
+                break;
             case '1':
                 t1 = 'Q';
                 t2 = 'U';
+                break;
             case '2':
                 t1 = 'I';
                 t2 = 'N';
+                break;
             case '3':
                 t1 = 'T';
                 t2 = 'H';
+                break;
             case '4':
                 t1 = 'E';
                 t2 = 'R';
+                break;
             case '5':
                 t1 = 'H';
                 t2 = 'E';
