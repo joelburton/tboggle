@@ -236,7 +236,10 @@ static bool find_words( // NOLINT(*-no-recursion)
             board->score += board->score_counts[word_len];
             if (board->score > board->max_score) return false;
 
-            if (word_len > board->longest) board->longest = word_len;
+            if (word_len > board->longest) {
+                board->longest = word_len;
+                if (board->longest > board->max_longest) return false;
+            }
         }
     }
 
