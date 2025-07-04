@@ -202,3 +202,6 @@ if __name__ == "__main__":
     g.restore_game(dice)
     print(len(g.legal.words))
 
+    g = Game(DiceSet.get_by_name("4"), 4, 4, scores)
+    g.fill_board(min_longest=11, random_seed=1)
+    print(len(g.legal.words))
