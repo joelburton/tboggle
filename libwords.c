@@ -88,6 +88,21 @@ typedef struct Board {
     char *dice_simple;
 } Board;
 
+// Global variables for current board (not re-entrant, but faster)
+static int g_board_width, g_board_height;
+static int g_max_x, g_max_y;
+static Board *g_current_board;
+static char *g_dice;
+static const int *g_score_counts;
+static char g_word[MAX_WORD_LEN + 1];  // Global word buffer
+
+// Delta lookup table for 8 neighbor directions
+static const int g_deltas[8][2] = {
+    {-1, -1}, {-1, 0}, {-1, 1},  // Top row
+    { 0, -1},          { 0, 1},  // Middle row (skip center)
+    { 1, -1}, { 1, 0}, { 1, 1}   // Bottom row
+};
+
 
 
 /** Shuffle order of dice.
@@ -149,16 +164,15 @@ void make_dice(Board *b) {
  */
 
 static bool find_words( // NOLINT(*-no-recursion)
-        Board *board,
         unsigned int i,
-        char *word,
         int word_len,
         const int y,
         const int x,
         int_least64_t used)
 {
-    const int h = board->height;
-    const int w = board->width;
+    // Use global board dimensions instead of dereferencing
+    const int h = g_board_height;
+    const int w = g_board_width;
 
     // If not a legal tile, can't make word here
     // if (y < 0 || y >= h || x < 0 || x >= w) return true;
@@ -170,7 +184,7 @@ static bool find_words( // NOLINT(*-no-recursion)
     if (used & mask) return true;
 
     // Find the DAWG-node for existing-DAWG-node plus this letter.
-    const char sought = board->dice[y * w + x];
+    const char sought = g_dice[y * w + x];
 
     if (sought >= 'A') {
         while (i != 0 && DAWG_LETTER(dawg, i) != sought) i = DAWG_NEXT(dawg, i);
@@ -180,7 +194,7 @@ static bool find_words( // NOLINT(*-no-recursion)
 
         // Either this is a word or the stem of a word. So update our 'word' to
         // include this letter.
-        word[word_len++] = sought;
+        g_word[word_len++] = sought;
     } else {
         char t1, t2;
 
@@ -221,27 +235,27 @@ static bool find_words( // NOLINT(*-no-recursion)
 
         // Either this is a word or the stem of a word. So update our 'word' to
         // include this letter.
-        word[word_len++] = t1;
-        word[word_len++] = t2;
+        g_word[word_len++] = t1;
+        g_word[word_len++] = t2;
     }
 
     // Mark this tile as used
     used |= mask;
 
     // Add this word to the found-words.
-    if (DAWG_EOW(dawg, i) && word_len >= board->min_legal) {
-        word[word_len] = '\0';
+    if (DAWG_EOW(dawg, i) && word_len >= g_current_board->min_legal) {
+        g_word[word_len] = '\0';
 
-        if (insert(word)) {
-            board->num_words++;
-            if (board->num_words > board->max_words) return false;
+        if (insert(g_word)) {
+            g_current_board->num_words++;
+            if (g_current_board->num_words > g_current_board->max_words) return false;
 
-            board->score += board->score_counts[word_len];
-            if (board->score > board->max_score) return false;
+            g_current_board->score += g_score_counts[word_len];
+            if (g_current_board->score > g_current_board->max_score) return false;
 
-            if (word_len > board->longest) {
-                board->longest = word_len;
-                if (board->longest > board->max_longest) return false;
+            if (word_len > g_current_board->longest) {
+                g_current_board->longest = word_len;
+                if (g_current_board->longest > g_current_board->max_longest) return false;
             }
         }
     }
@@ -249,20 +263,13 @@ static bool find_words( // NOLINT(*-no-recursion)
     // Check every direction H/V/D from here (will also re-check this tile, but
     // the can't-reuse-this-tile rule prevents it from actually succeeding)
 
-    const int my = h - 1;
-    const int mx = w - 1;
     const unsigned int child = DAWG_CHILD(dawg, i);
-    if (y > 0) {
-        if (x > 0 && !find_words(board, child, word, word_len, y - 1, x - 1, used)) return false;
-        if (!find_words(board, child, word, word_len, y - 1, x, used)) return false;
-        if (x < mx && !find_words(board, child, word, word_len, y - 1, x + 1, used)) return false;
-    }
-    if (x > 0 && !find_words(board, child, word, word_len, y, x - 1, used)) return false;
-    if (x < mx && !find_words(board, child, word, word_len, y, x + 1, used)) return false;
-    if (y < mx) {
-        if (x > 0 && !find_words(board, child, word, word_len, y + 1, x - 1, used)) return false;
-        if (!find_words(board, child, word, word_len, y + 1, x, used)) return false;
-        if (x < mx && !find_words(board, child, word, word_len, y + 1, x + 1, used)) return false;
+    for (int d = 0; d < 8; d++) {
+        const int ny = y + g_deltas[d][0];
+        const int nx = x + g_deltas[d][1];
+        if (ny >= 0 && ny <= g_max_y && nx >= 0 && nx <= g_max_x) {
+            if (!find_words(child, word_len, ny, nx, used)) return false;
+        }
     }
 
     //for (int di = -1; di < 2; di++) {
@@ -294,11 +301,18 @@ bool find_all_words(Board *b) {
     b->score = 0;
     b->legal = NULL;
 
-    char word[MAX_WORD_LEN + 1];
+    // Set up global variables for this board
+    g_current_board = b;
+    g_board_width = b->width;
+    g_board_height = b->height;
+    g_max_x = b->width - 1;
+    g_max_y = b->height - 1;
+    g_dice = b->dice;
+    g_score_counts = b->score_counts;
 
     for (int y = 0; y < b->height; y++) {
         for (int x = 0; x < b->width; x++) {
-            if (!find_words(b, 1, word, 0, y, x, 0x0)) return false;
+            if (!find_words(1, 0, y, x, 0x0)) return false;
         }
     }
     if (b->num_words < b->min_words) return false;
