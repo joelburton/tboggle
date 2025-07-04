@@ -91,11 +91,21 @@ typedef struct Board {
 // Global variables for current board (not re-entrant, but faster)
 static int g_board_width, g_board_height;
 static int g_max_x, g_max_y;
-static Board *g_current_board;
-static char *g_dice;
 static const int *g_score_counts;
 static char g_word[MAX_WORD_LEN + 1];  // Global word buffer
 static bool g_board_failed;  // Ultra-fast fail-fast flag
+
+// Board state as global variables (eliminates struct and pointer dereferencing)
+static char **g_dice_set;
+static Dice g_dice;  // Global dice array
+static int g_min_words, g_max_words;
+static int g_min_score, g_max_score;
+static int g_min_longest, g_max_longest;
+static int g_min_legal;
+static char **g_word_array;
+static int g_num_words;
+static int g_longest;
+static int g_score;
 
 // Delta lookup table for 8 neighbor directions
 static const int g_deltas[8][2] = {
@@ -122,12 +132,12 @@ static void shuffle_array(char *array[], const int n) {
 
 /** Fill dice from set randomly. */
 
-void make_dice(Board *b) {
-    const int len = b->height * b->width;
-    shuffle_array(b->set, len);
+void make_dice() {
+    const int len = g_board_height * g_board_width;
+    shuffle_array(g_dice_set, len);
 
     for (int i = 0; i < len; i++) {
-        b->dice[i] = b->set[i][random() % NUM_FACES];
+        g_dice[i] = g_dice_set[i][random() % NUM_FACES];
     }
 }
 
@@ -240,25 +250,25 @@ static bool find_words( // NOLINT(*-no-recursion)
     used |= mask;
 
     // Add this word to the found-words.
-    if (DAWG_EOW(dawg, i) && word_len >= g_current_board->min_legal) {
+    if (DAWG_EOW(dawg, i) && word_len >= g_min_legal) {
         g_word[word_len] = '\0';
 
         if (insert(g_word)) {
-            g_current_board->num_words++;
-            if (g_current_board->num_words > g_current_board->max_words) {
+            g_num_words++;
+            if (g_num_words > g_max_words) {
                 g_board_failed = true;
                 return false;
             }
 
-            g_current_board->score += g_score_counts[word_len];
-            if (g_current_board->score > g_current_board->max_score) {
+            g_score += g_score_counts[word_len];
+            if (g_score > g_max_score) {
                 g_board_failed = true;
                 return false;
             }
 
-            if (word_len > g_current_board->longest) {
-                g_current_board->longest = word_len;
-                if (g_current_board->longest > g_current_board->max_longest) {
+            if (word_len > g_longest) {
+                g_longest = word_len;
+                if (g_longest > g_max_longest) {
                     g_board_failed = true;
                     return false;
                 }
@@ -300,31 +310,21 @@ static bool find_words( // NOLINT(*-no-recursion)
  * Returns true if this board meets requirements, else false.
  **/
 
-bool find_all_words(Board *b) {
+bool find_all_words() {
     reset_hash_table();
-    b->num_words = 0;
-    b->longest = 0;
-    b->score = 0;
-    b->legal = NULL;
-
-    // Set up global variables for this board
-    g_current_board = b;
-    g_board_width = b->width;
-    g_board_height = b->height;
-    g_max_x = b->width - 1;
-    g_max_y = b->height - 1;
-    g_dice = b->dice;
-    g_score_counts = b->score_counts;
+    g_num_words = 0;
+    g_longest = 0;
+    g_score = 0;
     g_board_failed = false;  // Reset fail-fast flag
 
-    for (int y = 0; y < b->height; y++) {
-        for (int x = 0; x < b->width; x++) {
+    for (int y = 0; y < g_board_height; y++) {
+        for (int x = 0; x < g_board_width; x++) {
             if (!find_words(1, 0, y, x, 0x0)) return false;
         }
     }
-    if (b->num_words < b->min_words) return false;
-    if (b->score < b->min_score) return false;
-    if (b->longest < b->min_longest) return false;
+    if (g_num_words < g_min_words) return false;
+    if (g_score < g_min_score) return false;
+    if (g_longest < g_min_longest) return false;
 
     return true;
 }
@@ -349,14 +349,13 @@ bool find_all_words(Board *b) {
 //    // board->legal = nullptr;
 //}
 //
-int fill_board(Board *board, int max_tries){
+int fill_board(int max_tries){
     int count = 0;
     while (count++ < max_tries) {
-        make_dice(board);
-        if (find_all_words(board)) return count;
+        make_dice();
+        if (find_all_words()) return count;
     }
     return -1;
-        // free_words(board);
 }
 
 
@@ -380,11 +379,9 @@ int fill_board(Board *board, int max_tries){
 //    twalk(board->legal, btree_callback);
 //}
 
-void bws_btree_to_array(Board *board) {
-    tree_walk_i = 0;
-    tree_words = malloc(((board->num_words + 1) * sizeof(char *)));
+void bws_btree_to_array() {
     walk();
-    board->word_array = tree_words;
+    g_word_array = tree_words;
 }
 
 /** Get words for a board matching these requirements.
@@ -417,29 +414,30 @@ char **get_words(
     srandom(random_seed);
     if (width * height > 36) FATAL2("Oops", "Board too big");
 
-    Board *b = malloc(sizeof(Board));
-    b->set = set;
-    b->score_counts = score_counts;
-    b->width = width;
-    b->height = height;
-    b->min_words = min_words;
-    b->max_words = max_words == -1 ? INT32_MAX : max_words;
-    b->min_score = min_score;
-    b->max_score = max_score == -1 ? INT32_MAX : max_score;
-    b->min_longest = min_longest;
-    b->max_longest = max_longest == -1 ? INT32_MAX : max_longest;
-    b->min_legal = min_legal;
-    b->score = 0;
+    // Set up global board state
+    g_dice_set = set;
+    g_score_counts = score_counts;
+    g_board_width = width;
+    g_board_height = height;
+    g_max_x = width - 1;
+    g_max_y = height - 1;
+    g_min_words = min_words;
+    g_max_words = max_words == -1 ? INT32_MAX : max_words;
+    g_min_score = min_score;
+    g_max_score = max_score == -1 ? INT32_MAX : max_score;
+    g_min_longest = min_longest;
+    g_max_longest = max_longest == -1 ? INT32_MAX : max_longest;
+    g_min_legal = min_legal;
 
-    int tries = fill_board(b, max_tries);
+    int tries = fill_board(max_tries);
     if (tries == -1) return NULL;
 
     *num_tries = tries;
-    b->dice[width * height] = '\0';
-    *dice_simple = b->dice;
-    bws_btree_to_array(b);
-    b->word_array[b->num_words] = NULL;
-    return b->word_array;
+    g_dice[width * height] = '\0';
+    *dice_simple = g_dice;
+    bws_btree_to_array();
+    g_word_array[g_num_words] = NULL;
+    return g_word_array;
 }
 
 /** Restore an existing game by passing in the exact dice. */
@@ -450,23 +448,24 @@ char **restore_game(
     int height,
     Dice dice
 ) {
-    Board *b = malloc(sizeof(Board));
-    b->score_counts = score_counts;
-    b->width = width;
-    b->height = height;
-    b->min_words = 0;
-    b->max_words = INT32_MAX;
-    b->min_score = 0;
-    b->max_score = INT32_MAX;
-    b->min_longest = 0;
-    b->max_longest = INT32_MAX;
-    b->min_legal = 0;
-    b->score = 0;
-    strcpy(b->dice, dice);
+    // Set up global board state
+    g_score_counts = score_counts;
+    g_board_width = width;
+    g_board_height = height;
+    g_max_x = width - 1;
+    g_max_y = height - 1;
+    g_min_words = 0;
+    g_max_words = INT32_MAX;
+    g_min_score = 0;
+    g_max_score = INT32_MAX;
+    g_min_longest = 0;
+    g_max_longest = INT32_MAX;
+    g_min_legal = 0;
+    strcpy(g_dice, dice);
 
-    find_all_words(b);
-    bws_btree_to_array(b);
-    b->word_array[b->num_words] = NULL;
+    find_all_words();
+    bws_btree_to_array();
+    g_word_array[g_num_words] = NULL;
 
-    return b->word_array;
+    return g_word_array;
 }
