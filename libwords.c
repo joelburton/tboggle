@@ -11,6 +11,9 @@
 
 #include "tree.c"
 
+// Forward declaration from tree.c
+void reset_hash_table();
+
 #define CHILD_BIT_SHIFT 10
 #define EOW_BIT_MASK 0X00000200
 #define EOL_BIT_MASK 0X00000100
@@ -285,7 +288,7 @@ static bool find_words( // NOLINT(*-no-recursion)
  **/
 
 bool find_all_words(Board *b) {
-    tree_end = 0;
+    reset_hash_table();
     b->num_words = 0;
     b->longest = 0;
     b->score = 0;

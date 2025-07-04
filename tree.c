@@ -2,69 +2,58 @@
 #include <stdbool.h>
 #include <string.h>
 
-typedef struct sBNode {
-    int left;
-    int right;
-    char word[17];
-} BNode;
+#define HASH_SIZE 7919  // Prime number > 5000
+#define MAX_WORD_LEN 16
 
-BNode tree[5001];
+typedef struct {
+    char word[MAX_WORD_LEN + 1];
+    bool used;
+} HashEntry;
 
-// index of last item added to tree
-int tree_end = 0;
+HashEntry hash_table[HASH_SIZE];
+char *word_list[5001];  // For iteration
+int word_count = 0;
 
-// node #0 is just a placeholder for an empty tree
+// Simple hash function (djb2)
+unsigned int hash_word(const char *word) {
+    unsigned int hash = 5381;
+    while (*word) {
+        hash = ((hash << 5) + hash) + *word++;
+    }
+    return hash % HASH_SIZE;
+}
 
 /** Check/insert word. Returns true if added, false if found. */
-
 bool insert(char *word) {
-    if (tree_end == 0) {
-        strcpy(tree[++tree_end].word, word);
-        tree[tree_end].left = tree[tree_end].right = 0;
-        return true;
-    }
-
-    int current = 1;
-    while (true) {
-        const int comp = strcmp(word, tree[current].word);
-        if (comp < 0) {
-            if (tree[current].left == 0) {
-                tree[current].left = ++tree_end;
-                strcpy(tree[tree_end].word, word);
-                tree[tree_end].left = tree[tree_end].right = 0;
-                return true;
-            }
-            current = tree[current].left;
-        } else if (comp > 0) {
-            if (tree[current].right == 0) {
-                tree[current].right = ++tree_end;
-                strcpy(tree[tree_end].word, word);
-                tree[tree_end].left = tree[tree_end].right = 0;
-                return true;
-            }
-            current = tree[current].right;
-        } else {
-            return false;
+    unsigned int index = hash_word(word);
+    
+    while (hash_table[index].used) {
+        if (strcmp(hash_table[index].word, word) == 0) {
+            return false;  // Already exists
         }
+        index = (index + 1) % HASH_SIZE;
     }
+    
+    strcpy(hash_table[index].word, word);
+    hash_table[index].used = true;
+    word_list[word_count++] = hash_table[index].word;
+    return true;
+}
+
+// Reset hash table for new board
+void reset_hash_table() {
+    for (int i = 0; i < HASH_SIZE; i++) {
+        hash_table[i].used = false;
+    }
+    word_count = 0;
 }
 
 char **tree_words;
 int tree_walk_i;
 
-void inorderTraversal(const int i) {
-    if (i != 0) {
-        inorderTraversal(tree[i].left);
-        tree_words[tree_walk_i] = tree[i].word;
-        tree_walk_i += 1;
-        inorderTraversal(tree[i].right);
-    }
-}
-
-
 void walk() {
     tree_walk_i = 0;
-    inorderTraversal(1);
+    tree_words = word_list;
 }
 
 int main() {
@@ -76,7 +65,7 @@ int main() {
     printf("%d\n", insert("cherry"));
     walk();
 
-    tree_end = 0;
+    reset_hash_table();
     insert("moop");
     insert("foo");
     insert("bar");
