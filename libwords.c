@@ -123,18 +123,11 @@ static void shuffle_array(char *array[], const int n) {
 /** Fill dice from set randomly. */
 
 void make_dice(Board *b) {
-    const int height = b->height;
-    const int width = b->width;
     const int len = b->height * b->width;
     shuffle_array(b->set, len);
 
-    int i = 0;
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            if (i == len) return;
-            b->dice[i] = b->set[i][random() % NUM_FACES];
-            i++;
-        }
+    for (int i = 0; i < len; i++) {
+        b->dice[i] = b->set[i][random() % NUM_FACES];
     }
 }
 

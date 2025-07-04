@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define HASH_SIZE 7919  // Prime number > 5000
+#define HASH_SIZE 15877  // Prime number ~2x original for lower collision rate
 #define MAX_WORD_LEN 16
 
 typedef struct {
@@ -38,8 +38,8 @@ bool insert(char *word) {
     
     strcpy(hash_table[index].word, word);
     hash_table[index].used = true;
-    word_list[word_count++] = hash_table[index].word;
     used_indices[used_count++] = index;  // Track this index for reset
+    word_count++;
     return true;
 }
 
@@ -56,8 +56,14 @@ char **tree_words;
 int tree_walk_i;
 
 void walk() {
+    tree_words = malloc(word_count * sizeof(char *));
     tree_walk_i = 0;
-    tree_words = word_list;
+    
+    // Extract words from hash table using used_indices
+    for (int i = 0; i < used_count; i++) {
+        int index = used_indices[i];
+        tree_words[tree_walk_i++] = hash_table[index].word;
+    }
 }
 
 int main() {
