@@ -52,11 +52,18 @@ void reset_hash_table() {
     used_count = 0;
 }
 
-char **tree_words;
+char **tree_words = NULL;
 int tree_walk_i;
+static int tree_words_capacity = 0;
 
 void walk() {
-    tree_words = malloc(word_count * sizeof(char *));
+    // Grow buffer if needed
+    if (word_count > tree_words_capacity) {
+        free(tree_words);  // Safe to call on NULL
+        tree_words_capacity = word_count + 1000;  // Add some headroom
+        tree_words = malloc(tree_words_capacity * sizeof(char *));
+    }
+    
     tree_walk_i = 0;
     
     // Extract words from hash table using used_indices
