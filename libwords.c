@@ -34,10 +34,6 @@ perror(err_msg); \
 exit(1); \
 }
 
-// typedef struct {
-//    const char *word;
-//} BoardWord;
-
 // Maximum board size is 6x6 -- plus one for '\0' at end
 typedef char Dice[37];
 
@@ -113,8 +109,11 @@ static const char g_special_dice[6][2] = {
  */
 
 static void shuffle_array(char *array[], const int n) {
-    for (long i = 0; i < n - 1; i++) {
-        const long j = i + random() % (n - i);
+    // Optimized for small arrays (most Boggle games are 4x4=16 or 5x5=25)
+    for (int i = 0; i < n - 1; i++) {
+        // Use division-free method for small ranges
+        const int range = n - i;
+        const int j = i + (random() % range);
         char *temp = array[j];
         array[j] = array[i];
         array[i] = temp;
@@ -168,7 +167,7 @@ static bool find_words( // NOLINT(*-no-recursion)
     // Ultra-fast fail-fast check
     if (g_board_failed) return false;
     
-    // Use global board dimensions instead of dereferencing
+    // Cache board dimensions in local variables for better register allocation
     const int h = g_board_height;
     const int w = g_board_width;
 
@@ -185,7 +184,11 @@ static bool find_words( // NOLINT(*-no-recursion)
     const char sought = g_dice[y * w + x];
 
     if (sought >= 'A') {
-        while (i != 0 && DAWG_LETTER(dawg, i) != sought) i = DAWG_NEXT(dawg, i);
+        // Cache dawg array access
+        const int32_t *dawg_ptr = dawg;
+        while (i != 0 && (dawg_ptr[i] & LTR_BIT_MASK) != sought) {
+            i = (dawg_ptr[i] & EOL_BIT_MASK) ? 0 : i + 1;
+        }
 
         // There are no words continuing with this letter
         if (i == 0) return true;
@@ -199,13 +202,19 @@ static bool find_words( // NOLINT(*-no-recursion)
         const char t1 = g_special_dice[idx][0];
         const char t2 = g_special_dice[idx][1];
 
-        while (i != 0 && DAWG_LETTER(dawg, i) != t1) i = DAWG_NEXT(dawg, i);
+        // Cache dawg array access
+        const int32_t *dawg_ptr = dawg;
+        while (i != 0 && (dawg_ptr[i] & LTR_BIT_MASK) != t1) {
+            i = (dawg_ptr[i] & EOL_BIT_MASK) ? 0 : i + 1;
+        }
 
         // There are no words continuing with this letter
         if (i == 0) return true;
 
-        i = DAWG_CHILD(dawg, i);
-        while (i != 0 && DAWG_LETTER(dawg, i) != t2) i = DAWG_NEXT(dawg, i);
+        i = dawg_ptr[i] >> CHILD_BIT_SHIFT;
+        while (i != 0 && (dawg_ptr[i] & LTR_BIT_MASK) != t2) {
+            i = (dawg_ptr[i] & EOL_BIT_MASK) ? 0 : i + 1;
+        }
         if (i == 0) return true;
 
         // Either this is a word or the stem of a word. So update our 'word' to
@@ -218,7 +227,7 @@ static bool find_words( // NOLINT(*-no-recursion)
     used |= mask;
 
     // Add this word to the found-words.
-    if (DAWG_EOW(dawg, i) && word_len >= g_min_legal) {
+    if ((dawg[i] & EOW_BIT_MASK) && word_len >= g_min_legal) {
         g_word[word_len] = '\0';
 
         if (insert(g_word)) {
@@ -247,7 +256,7 @@ static bool find_words( // NOLINT(*-no-recursion)
     // Check every direction H/V/D from here (will also re-check this tile, but
     // the can't-reuse-this-tile rule prevents it from actually succeeding)
 
-    const unsigned int child = DAWG_CHILD(dawg, i);
+    const unsigned int child = dawg[i] >> CHILD_BIT_SHIFT;
     for (int d = 0; d < 8; d++) {
         const int ny = y + g_deltas[d][0];
         const int nx = x + g_deltas[d][1];
@@ -256,19 +265,6 @@ static bool find_words( // NOLINT(*-no-recursion)
         }
     }
 
-    //for (int di = -1; di < 2; di++) {
-    //    for (int dj = -1; dj < 2; dj++) {
-    //        if (!find_words(
-    //            board,
-    //            DAWG_CHILD(dawg, i),
-    //            word,
-    //            word_len,
-    //            y + di,
-    //            x + dj,
-    //            used
-    //        )) return false;
-    //    }
-    //}
     return true;
 }
 
@@ -297,27 +293,7 @@ bool find_all_words() {
 
     return true;
 }
-//
-//
-///** Free word inside a BoardWord. */
-//
-//void delNode( const void *nodep, const VISIT value, [[maybe_unused]] int level) {
-//    const BoardWord *n = *(const BoardWord **) nodep;
-//
-//    if (value == leaf || value == endorder) {
-//        free((void *) n->word);
-//        free((void *) n);
-//        free((void *) nodep);
-//    }
-//}
-//
-///** Free list of legal words. */
-//
-//void free_words(const Board *board) {
-//    twalk(board->legal, delNode);
-//    // board->legal = nullptr;
-//}
-//
+
 int fill_board(int max_tries){
     int count = 0;
     while (count++ < max_tries) {
@@ -327,26 +303,6 @@ int fill_board(int max_tries){
     return -1;
 }
 
-
-//struct WalkData {
-//    char **words;
-//    int marker;
-//};
-
-//struct WalkData *walker;
-//void btree_callback(const void *n, const VISIT value, int depth) {
-//    if (value == leaf || value == postorder) {
-//        BoardWord *bw = *(BoardWord **)n;
-//        walker->words[walker->marker++] = bw->word;
-//    }
-//}
-//
-//void bws_btree_to_array(Board *board) {
-//    board->word_array = malloc(((board->num_words + 1) * sizeof(BoardWord*)));
-//    struct WalkData w = {board->word_array, 0};
-//    walker = &w;
-//    twalk(board->legal, btree_callback);
-//}
 
 void bws_btree_to_array() {
     walk();

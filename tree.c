@@ -1,9 +1,8 @@
-#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
 
-#define HASH_SIZE 15877  // Prime number ~2x original for lower collision rate
+#define HASH_SIZE 15877
 #define MAX_WORD_LEN 16
 
 typedef struct {
@@ -27,7 +26,7 @@ static inline unsigned int hash_word(const char *word) {
 }
 
 /** Check/insert word. Returns true if added, false if found. */
-bool insert(char *word) {
+static inline bool insert(char *word) {
     unsigned int index = hash_word(word);
     
     while (hash_table[index].used) {
@@ -44,9 +43,10 @@ bool insert(char *word) {
     return true;
 }
 
-// Reset hash table for new board
+// Reset hash table for new board - optimized for cache efficiency
 void reset_hash_table() {
-    for (int i = 0; i < used_count; i++) {
+    const int count = used_count;
+    for (int i = 0; i < count; i++) {
         hash_table[used_indices[i]].used = false;
     }
     word_count = 0;
@@ -72,21 +72,5 @@ void walk() {
         int index = used_indices[i];
         tree_words[tree_walk_i++] = hash_table[index].word;
     }
-}
-
-int main() {
-    tree_words = malloc(1000);
-    printf("%d\n", insert("apple"));
-    printf("%d\n", insert("berry"));
-    printf("%d\n", insert("apple"));
-    printf("%d\n", insert("aardvark"));
-    printf("%d\n", insert("cherry"));
-    walk();
-
-    reset_hash_table();
-    insert("moop");
-    insert("foo");
-    insert("bar");
-    walk();
 }
 
