@@ -17,7 +17,7 @@ int used_indices[5001];  // Track which hash table indices are used
 int used_count = 0;
 
 // Simple hash function (djb2)
-unsigned int hash_word(const char *word) {
+static inline unsigned int hash_word(const char *word) {
     unsigned int hash = 5381;
     while (*word) {
         hash = ((hash << 5) + hash) + *word++;

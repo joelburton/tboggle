@@ -95,6 +95,7 @@ static Board *g_current_board;
 static char *g_dice;
 static const int *g_score_counts;
 static char g_word[MAX_WORD_LEN + 1];  // Global word buffer
+static bool g_board_failed;  // Ultra-fast fail-fast flag
 
 // Delta lookup table for 8 neighbor directions
 static const int g_deltas[8][2] = {
@@ -170,6 +171,9 @@ static bool find_words( // NOLINT(*-no-recursion)
         const int x,
         int_least64_t used)
 {
+    // Ultra-fast fail-fast check
+    if (g_board_failed) return false;
+    
     // Use global board dimensions instead of dereferencing
     const int h = g_board_height;
     const int w = g_board_width;
@@ -248,14 +252,23 @@ static bool find_words( // NOLINT(*-no-recursion)
 
         if (insert(g_word)) {
             g_current_board->num_words++;
-            if (g_current_board->num_words > g_current_board->max_words) return false;
+            if (g_current_board->num_words > g_current_board->max_words) {
+                g_board_failed = true;
+                return false;
+            }
 
             g_current_board->score += g_score_counts[word_len];
-            if (g_current_board->score > g_current_board->max_score) return false;
+            if (g_current_board->score > g_current_board->max_score) {
+                g_board_failed = true;
+                return false;
+            }
 
             if (word_len > g_current_board->longest) {
                 g_current_board->longest = word_len;
-                if (g_current_board->longest > g_current_board->max_longest) return false;
+                if (g_current_board->longest > g_current_board->max_longest) {
+                    g_board_failed = true;
+                    return false;
+                }
             }
         }
     }
@@ -309,6 +322,7 @@ bool find_all_words(Board *b) {
     g_max_y = b->height - 1;
     g_dice = b->dice;
     g_score_counts = b->score_counts;
+    g_board_failed = false;  // Reset fail-fast flag
 
     for (int y = 0; y < b->height; y++) {
         for (int x = 0; x < b->width; x++) {
