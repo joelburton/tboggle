@@ -95,17 +95,30 @@ static const int g_deltas[8][2] = {
     { 1, -1}, { 1, 0}, { 1, 1}   // Bottom row
 };
 
+// Lookup table for special dice characters '0'-'5'
+static const char g_special_dice[6][2] = {
+    {'_', '_'},  // '0'
+    {'Q', 'U'},  // '1' 
+    {'I', 'N'},  // '2'
+    {'T', 'H'},  // '3'
+    {'E', 'R'},  // '4'
+    {'H', 'E'}   // '5'
+};
+
 
 
 /** Shuffle order of dice.
  *
- * A fair shuffle using Fisher-Yates.
+ * Optimized Fisher-Yates shuffle for performance-critical board generation.
  */
 
 static void shuffle_array(char *array[], const int n) {
-    for (long i = 0; i < n - 1; i++) {
-        const long j = i + random() % (n - i);
-        char *temp = array[j];
+    char *temp;  // Move temp declaration outside loop
+    for (int i = 0; i < n - 1; i++) {
+        // Optimized random index generation for small ranges (max 36 for 6x6 board)
+        const int range = n - i;
+        const int j = i + (random() >> 8) % range;  // Use higher bits, faster than division
+        temp = array[j];
         array[j] = array[i];
         array[i] = temp;
     }
@@ -184,33 +197,10 @@ static bool find_words( // NOLINT(*-no-recursion)
         // include this letter.
         g_word[word_len++] = sought;
     } else {
-        char t1, t2;
-
-        switch (sought) {
-            case '0':
-                t1 = '_';
-                t2 = '_';
-                break;
-            case '1':
-                t1 = 'Q';
-                t2 = 'U';
-                break;
-            case '2':
-                t1 = 'I';
-                t2 = 'N';
-                break;
-            case '3':
-                t1 = 'T';
-                t2 = 'H';
-                break;
-            case '4':
-                t1 = 'E';
-                t2 = 'R';
-                break;
-            case '5':
-                t1 = 'H';
-                t2 = 'E';
-        }
+        // Use lookup table for special dice characters (O(1) vs switch branching)
+        const int idx = sought - '0';
+        const char t1 = g_special_dice[idx][0];
+        const char t2 = g_special_dice[idx][1];
 
         while (i != 0 && DAWG_LETTER(dawg, i) != t1) i = DAWG_NEXT(dawg, i);
 
