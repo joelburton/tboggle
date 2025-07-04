@@ -13,6 +13,8 @@ typedef struct {
 HashEntry hash_table[HASH_SIZE];
 char *word_list[5001];  // For iteration
 int word_count = 0;
+int used_indices[5001];  // Track which hash table indices are used
+int used_count = 0;
 
 // Simple hash function (djb2)
 unsigned int hash_word(const char *word) {
@@ -37,15 +39,17 @@ bool insert(char *word) {
     strcpy(hash_table[index].word, word);
     hash_table[index].used = true;
     word_list[word_count++] = hash_table[index].word;
+    used_indices[used_count++] = index;  // Track this index for reset
     return true;
 }
 
 // Reset hash table for new board
 void reset_hash_table() {
-    for (int i = 0; i < HASH_SIZE; i++) {
-        hash_table[i].used = false;
+    for (int i = 0; i < used_count; i++) {
+        hash_table[used_indices[i]].used = false;
     }
     word_count = 0;
+    used_count = 0;
 }
 
 char **tree_words;
