@@ -67,26 +67,7 @@ void read_dawg(const char *path) {
 /****************************** BOARD *****************************/
 
 
-typedef struct Board {
-    char **set;
-    Dice dice;
-    const int *score_counts;
-    int width;
-    int height;
-    int min_words;
-    int max_words;
-    int min_score;
-    int max_score;
-    int min_longest;
-    int max_longest;
-    int min_legal;
-    void *legal;
-    char **word_array;
-    int num_words;
-    int longest;
-    int score;
-    char *dice_simple;
-} Board;
+// Board struct eliminated - all state moved to global variables
 
 // Global variables for current board (not re-entrant, but faster)
 static int g_board_width, g_board_height;
