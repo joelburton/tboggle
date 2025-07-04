@@ -113,12 +113,9 @@ static const char g_special_dice[6][2] = {
  */
 
 static void shuffle_array(char *array[], const int n) {
-    char *temp;  // Move temp declaration outside loop
-    for (int i = 0; i < n - 1; i++) {
-        // Optimized random index generation for small ranges (max 36 for 6x6 board)
-        const int range = n - i;
-        const int j = i + (random() >> 8) % range;  // Use higher bits, faster than division
-        temp = array[j];
+    for (long i = 0; i < n - 1; i++) {
+        const long j = i + random() % (n - i);
+        char *temp = array[j];
         array[j] = array[i];
         array[i] = temp;
     }
@@ -296,6 +293,7 @@ bool find_all_words() {
     if (g_num_words < g_min_words) return false;
     if (g_score < g_min_score) return false;
     if (g_longest < g_min_longest) return false;
+    if (g_longest > g_max_longest) return false;
 
     return true;
 }

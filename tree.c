@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define HASH_SIZE 15877  // Prime number ~2x original for lower collision rate
 #define MAX_WORD_LEN 16
