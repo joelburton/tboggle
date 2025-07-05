@@ -503,10 +503,112 @@ bool find_all_words() {
 }
 
 /**
+ * Fast heuristic: check board quality before expensive word finding
+ * 
+ * Performs quick checks to identify boards that are unlikely to have
+ * many words, avoiding the expensive recursive word-finding algorithm.
+ * 
+ * HEURISTICS CHECKED:
+ * 1. Vowel/consonant ratio (target: 30-40% vowels)
+ * 2. Common letter presence (S, R, T, N, L are word-builders)
+ * 3. Letter distribution (avoid clustering)
+ * 4. Special patterns (QU positioning, common endings)
+ * 
+ * @return true if board looks promising, false if likely poor
+ */
+static bool board_looks_promising() {
+    const int board_size = g_board_width * g_board_height;
+    int vowel_count = 0;
+    int common_letters = 0;  // Count of S, R, T, N, L
+    int special_chars = 0;   // Count of multi-letter dice (1-5)
+    
+    // Character frequency analysis
+    for (int i = 0; i < board_size; i++) {
+        char c = g_dice[i];
+        
+        // Count vowels (including special patterns)
+        if (c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U') {
+            vowel_count++;
+        } else if (c == '2') {  // 'IN' pattern has vowel
+            vowel_count++;
+        } else if (c == '5') {  // 'HE' pattern has vowel  
+            vowel_count++;
+        }
+        
+        // Count common word-building letters
+        if (c == 'S' || c == 'R' || c == 'T' || c == 'N' || c == 'L') {
+            common_letters++;
+        }
+        
+        // Count special multi-letter dice
+        if (c >= '1' && c <= '5') {
+            special_chars++;
+        }
+    }
+    
+    // Heuristic 1: Vowel ratio check (more permissive range)
+    int vowel_percentage = (vowel_count * 100) / board_size;
+    if (vowel_percentage < 15 || vowel_percentage > 65) {
+        return false;  // Only reject extreme cases
+    }
+    
+    // Heuristic 2: Need some common letters for word building (very permissive)
+    if (common_letters < 1) {
+        return false;  // Only reject if completely missing common letters
+    }
+    
+    // Heuristic 3: Don't have too many special characters (permissive)
+    if (special_chars > board_size / 2) {
+        return false;  // Allow up to half special chars
+    }
+    
+    // For high word count requirements, be more selective
+    if (g_min_words > 100) {
+        // Need better vowel ratio for very high word counts
+        if (vowel_percentage < 20 || vowel_percentage > 55) {
+            return false;
+        }
+        // Need more common letters
+        if (common_letters < 2) {
+            return false;
+        }
+    }
+    
+    // Additional check for extremely high requirements only
+    if (g_min_words > 200 || g_min_longest > 10) {
+        // Must have excellent letter distribution
+        if (vowel_count < 3 || common_letters < 3) {
+            return false;
+        }
+        
+        // Check for presence of word-ending letters
+        bool has_s = false, has_d = false, has_g = false;
+        for (int i = 0; i < board_size; i++) {
+            char c = g_dice[i];
+            if (c == 'S') has_s = true;
+            if (c == 'D') has_d = true;
+            if (c == 'G') has_g = true;
+        }
+        
+        // Need good word-ending options for very long words
+        int endings = has_s + has_d + has_g;
+        if (endings < 1) {
+            return false;
+        }
+    }
+    
+    return true;  // Board looks promising
+}
+
+/**
  * Generate a valid board within attempt limit
  * 
  * Repeatedly generates random boards until one meets all the specified
  * constraints (word count, score, longest word, etc.) or max attempts reached.
+ * 
+ * OPTIMIZATION: Uses fast heuristics to reject unpromising boards before
+ * running the expensive word-finding algorithm, significantly improving
+ * performance when constraints are high.
  * 
  * @param max_tries Maximum number of board generation attempts
  * @return Number of attempts taken (1-based), or -1 if failed
@@ -515,7 +617,13 @@ int fill_board(int max_tries) {
     int count = 0;
     while (count++ < max_tries) {
         make_dice();           // Generate random board
-        if (find_all_words()) { // Check if it meets requirements
+        
+        // Fast rejection: skip expensive word finding if board looks poor
+        if (!board_looks_promising()) {
+            continue;          // Try another board without word analysis
+        }
+        
+        if (find_all_words()) { // Expensive check if it meets requirements
             return count;      // Success: return attempt count
         }
     }

@@ -1,7 +1,3 @@
-- do we need HashEntry struct? could the used array be enough?
-
-- preallocate static array for word list rather than ever malloc'ing
-
 - improve documentation
 
 - should we convert to a python extension rather than ctypes?
