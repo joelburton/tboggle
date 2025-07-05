@@ -251,23 +251,28 @@ class BoggleApp(App):
         self.time_left = game.duration
         self.time_max = game.duration
         self.my_timer: Timer | None = None
+        self.time_widget = None  # Cache for timer widget
         super().__init__()
 
     def on_mount(self):
         if self.game.duration:
             self.my_timer = self.set_interval(1, self.update_timer)
+            # Cache the timer widget reference for performance
+            try:
+                self.time_widget = self.query_one("#num_time")
+            except:
+                self.time_widget = None
 
     def update_timer(self):
-        if self.timer:
-            nt = self.query_one("#num_time")
+        if self.timer and self.time_widget:
             self.time_left -= 1
-            nt.update(str(self.time_left))
+            self.time_widget.update(str(self.time_left))
             if self.time_left == 0:
                 self.action_end()
             elif self.time_left < 20:
-                nt.styles.color = "red"
+                self.time_widget.styles.color = "red"
             elif self.time_left < 40:
-                nt.styles.color = "orange"
+                self.time_widget.styles.color = "orange"
 
     def action_end(self):
         self.timer = False
