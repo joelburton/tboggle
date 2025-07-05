@@ -306,7 +306,7 @@ int fill_board(int max_tries){
 
 void bws_btree_to_array() {
     walk();
-    g_word_array = tree_words;
+    g_word_array = word_list;
 }
 
 /** Get words for a board matching these requirements.

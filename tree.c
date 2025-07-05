@@ -4,6 +4,7 @@
 
 #define HASH_SIZE 15877
 #define MAX_WORD_LEN 16
+#define MAX_WORDS 5000
 
 typedef struct {
     char word[MAX_WORD_LEN + 1];
@@ -11,9 +12,9 @@ typedef struct {
 } HashEntry;
 
 HashEntry hash_table[HASH_SIZE];
-char *word_list[5001];  // For iteration
+char *word_list[MAX_WORDS + 1];  // For iteration
 int word_count = 0;
-int used_indices[5001];  // Track which hash table indices are used
+int used_indices[MAX_WORDS + 1];  // Track which hash table indices are used
 int used_count = 0;
 
 // Simple hash function (djb2)
@@ -53,24 +54,10 @@ void reset_hash_table() {
     used_count = 0;
 }
 
-char **tree_words = NULL;
-int tree_walk_i;
-static int tree_words_capacity = 0;
-
 void walk() {
-    // Grow buffer if needed
-    if (word_count > tree_words_capacity) {
-        free(tree_words);  // Safe to call on NULL
-        tree_words_capacity = word_count + 1000;  // Add some headroom
-        tree_words = malloc(tree_words_capacity * sizeof(char *));
-    }
-    
-    tree_walk_i = 0;
-    
-    // Extract words from hash table using used_indices
     for (int i = 0; i < used_count; i++) {
         int index = used_indices[i];
-        tree_words[tree_walk_i++] = hash_table[index].word;
+        word_list[i] = hash_table[index].word;
     }
 }
 
