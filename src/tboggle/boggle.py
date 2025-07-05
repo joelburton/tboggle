@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-import sys
+from typing import Optional
 from random import randint
 
 from rich.markup import escape
@@ -32,10 +32,10 @@ class Board(Widget):
 
     app: BoggleApp
 
-    def on_mount(self):
+    def on_mount(self) -> None:
         self.styles.height = 2 * len(self.app.game.board) + 3
 
-    def render(self):
+    def render(self) -> str:
         lines = []
         for row in self.app.game.board:
             line = "  ".join(cell for cell in row)
@@ -46,7 +46,7 @@ class Board(Widget):
 class LeftPane(Vertical):
     app: BoggleApp
 
-    def on_mount(self):
+    def on_mount(self) -> None:
         self.styles.width = len(self.app.game.board[0]) * 4 + 4
 
 
@@ -64,13 +64,13 @@ class WordInput(Input):
         self.history = []
         self.history_at = 0
 
-    def action_up(self):
+    def action_up(self) -> None:
         if self.history_at > 0:
             self.history_at -= 1
             self.value = self.history[self.history_at]
             self.cursor_position = len(self.value)
 
-    def action_down(self):
+    def action_down(self) -> None:
         if self.history_at < len(self.history) - 1:
             self.history_at += 1
             self.value = self.history[self.history_at]
@@ -81,7 +81,7 @@ class WordInput(Input):
             self.history_at = len(self.history) 
 
     @on(Input.Submitted)
-    def submitted(self, event):
+    def submitted(self, event) -> None:
         word = event.value
         result = self.app.game.handle_guess(word)
         if result == GuessResult.GOOD:
@@ -99,7 +99,7 @@ class WordInput(Input):
         self.placeholder = word
 
     @on(Input.Changed)
-    def reset_color_on_entry(self, event):
+    def reset_color_on_entry(self, event) -> None:
         if event.value:
             self.classes = ""
 
@@ -107,12 +107,12 @@ class WordInput(Input):
 class StatusArea(Container):
     app: BoggleApp
 
-    def compose(self):
+    def compose(self) -> ComposeResult:
         game = self.app.game
         max_words = str(len(game.legal.words))
         max_score = str(game.legal.score)
         max_long = str(game.legal.longest)
-        dur = str(self.app.game.duration)
+        duration = str(self.app.game.duration)
         time_left = str(self.app.time_left)
         num_words = str(len(game.found.words))
         longest = str(game.found.longest)
@@ -120,7 +120,7 @@ class StatusArea(Container):
 
         if self.app.game.duration:
             yield Label("Time:", classes="status-label")
-            yield Label(dur, classes="status-r status-base")
+            yield Label(duration, classes="status-r status-base")
             yield Label(time_left, classes="status-r", id="num_time")
 
         yield Label("Words:", classes="status-label")
@@ -144,26 +144,26 @@ class Page:
     total_words: int
 
 class Results(DataTable):
-    def on_mount(self):
+    def on_mount(self) -> None:
         self.cur_page_num = 1
         self.pages = []
         if not self.app.playing:
             self.make_stats()
 
-    def on_key(self, event):
+    def on_key(self, event) -> None:
         if event.key == "space" and self.cur_page_num < len(self.pages):
             self.show_page(self.cur_page_num + 1)
         if event.key == "backspace" and self.cur_page_num > 1:
             self.show_page(self.cur_page_num - 1)
 
-    def on_data_table_cell_highlighted(self, event):
+    def on_data_table_cell_highlighted(self, event) -> None:
         if not self.disabled and event.value and not self.app.playing:
             word = event.value
             defn = escape(get_def(word) or "(nothing found)")
             score = self.app.game.scores[len(word)]
             self.app.query_one("#def-area").update(f"[u]{word} ({score})[/]: [i]{defn}[/]")
 
-    def make_list(self, title, words_set):
+    def make_list(self, title: str, words_set: set[str]) -> None:
         self.header_height = 0
 
         words = list(sorted(words_set))
@@ -181,7 +181,7 @@ class Results(DataTable):
 
         self.show_page(1)
 
-    def show_page(self, num: int):
+    def show_page(self, num: int) -> None:
         self.disabled = False
         self.cur_page_num = num
         p = self.pages[num - 1]
@@ -204,7 +204,7 @@ class Results(DataTable):
         if not self.app.playing:
             self.focus()
 
-    def make_stats(self):
+    def make_stats(self) -> None:
         self.border_title = "Stats"
         self.border_subtitle = ""
         self.clear(columns=True)
@@ -246,15 +246,15 @@ class BoggleApp(App):
     timer = var(True)
     playing = reactive(True, recompose=True, init=False)
 
-    def __init__(self, game):
+    def __init__(self, game: Game) -> None:
         self.game = game
         self.time_left = game.duration
         self.time_max = game.duration
-        self.my_timer: Timer | None = None
-        self.time_widget = None  # Cache for timer widget
+        self.my_timer: Optional[Timer] = None
+        self.time_widget: Optional[Label] = None  # Cache for timer widget
         super().__init__()
 
-    def on_mount(self):
+    def on_mount(self) -> None:
         if self.game.duration:
             self.my_timer = self.set_interval(1, self.update_timer)
             # Cache the timer widget reference for performance
@@ -263,7 +263,7 @@ class BoggleApp(App):
             except:
                 self.time_widget = None
 
-    def update_timer(self):
+    def update_timer(self) -> None:
         if self.timer and self.time_widget:
             self.time_left -= 1
             self.time_widget.update(str(self.time_left))
@@ -274,14 +274,14 @@ class BoggleApp(App):
             elif self.time_left < 40:
                 self.time_widget.styles.color = "orange"
 
-    def action_end(self):
+    def action_end(self) -> None:
         self.timer = False
         if self.game.duration:
             self.my_timer.stop()
         self.playing = False
         self.action_stats()
 
-    def compose(self):
+    def compose(self) -> ComposeResult:
         with Horizontal():
             with LeftPane():
                 yield Board()
@@ -304,7 +304,7 @@ class BoggleApp(App):
 
     # -----------------------------
 
-    def check_action(self, event, parameters):
+    def check_action(self, event: str, parameters) -> bool:
         if not self.app.game.duration and event == "pause":
             return False
         if self.playing:
@@ -319,10 +319,10 @@ class BoggleApp(App):
         """Called when the user hits Ctrl+Q."""
         self.push_screen(ExitModal())
 
-    def action_lookup(self):
+    def action_lookup(self) -> None:
         self.push_screen(LookupModal())
 
-    def action_pause(self):
+    def action_pause(self) -> None:
         def restart_timer(_):
             self.query_one("Input").disabled = False
             self.timer = True
@@ -331,21 +331,21 @@ class BoggleApp(App):
         self.timer = False
         self.push_screen(PauseModal(), restart_timer)
 
-    def action_found(self):
+    def action_found(self) -> None:
         self.query_one(Results).make_list("Found", self.game.found.words)
 
-    def action_missed(self):
+    def action_missed(self) -> None:
         self.query_one(Results).make_list("Missed", self.game.get_missed())
 
-    def action_bad(self):
+    def action_bad(self) -> None:
         self.query_one(Results).make_list("Bad", self.game.bad.words)
 
-    def action_stats(self):
+    def action_stats(self) -> None:
         self.query_one(Results).make_stats()
 
     # -------------------------------
 
-    def add_word(self, word):
+    def add_word(self, word: str) -> None:
         found = self.query_one(Results)
         found.make_list("Found", self.game.found.words)
         found.cursor_type = "none"
@@ -355,7 +355,7 @@ class BoggleApp(App):
         self.query_one("#num-long").update(str(f.longest))
 
 
-def main():
+def main() -> None:
     import os
 
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -369,13 +369,12 @@ def main():
             if not result: break
         choices, start_by = result
 
-        set =  DiceSet.get_by_name(choices.set)
-        game = Game(set, set.num, set.num, duration=choices.timeout, min_legal=choices.legal_min, scores=choices.scores)
+        dice_set = DiceSet.get_by_name(choices.set)
+        game = Game(dice_set, dice_set.num, dice_set.num, duration=choices.timeout, min_legal=choices.legal_min, scores=choices.scores)
         if start_by == "restore":
-            dice = [ 65, 65, 65, 65, 66, 66, 66, 66 ,67, 67, 67, 67, 69,69,69,69]
-            #g = Game(DiceSet.get_by_name("4"), 4, 4, scores)
-            game.restore_game(dice)
-            #game.restore_game()
+            # Demo dice configuration for testing (A=65, B=66, C=67, E=69)
+            demo_dice = [65, 65, 65, 65, 66, 66, 66, 66, 67, 67, 67, 67, 69, 69, 69, 69]
+            game.restore_game(demo_dice)
         else:
             game.fill_board(
                 min_words=choices.min_words,
@@ -386,10 +385,10 @@ def main():
                 max_longest=choices.max_longest,
             )
         app = BoggleApp(game)
-        rez = app.run()
-        if rez == "board":
+        result = app.run()
+        if result == "board":
             pass
-        elif rez == "game":
+        elif result == "game":
             choices = None
         else:
             break
