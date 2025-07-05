@@ -36,12 +36,11 @@ class Board(Widget):
         self.styles.height = 2 * len(self.app.game.board) + 3
 
     def render(self):
-        s = ""
+        lines = []
         for row in self.app.game.board:
-            for cell in row:
-                s += f"{cell}  "
-            s += "\n\n"
-        return s.strip()
+            line = "  ".join(cell for cell in row)
+            lines.append(line)
+        return "\n\n".join(lines)
 
 
 class LeftPane(Vertical):
