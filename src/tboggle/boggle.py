@@ -23,6 +23,12 @@ from tboggle.pause_modal import PauseModal
 from tboggle.exit_modal import ExitModal
 from tboggle.lookup_modal import LookupModal
 
+# Constants
+TIMER_WARNING_THRESHOLD = 40  # Orange color below this many seconds
+TIMER_DANGER_THRESHOLD = 20   # Red color below this many seconds
+MAX_WORD_LENGTH_LARGE_BOARD = 16  # For boards larger than 4x4
+MAX_WORD_LENGTH_SMALL_BOARD = 15  # For 4x4 boards or smaller
+
 
 class Board(Widget):
     """Show non-interactive board.
@@ -269,9 +275,9 @@ class BoggleApp(App):
             self.time_widget.update(str(self.time_left))
             if self.time_left == 0:
                 self.action_end()
-            elif self.time_left < 20:
+            elif self.time_left < TIMER_DANGER_THRESHOLD:
                 self.time_widget.styles.color = "red"
-            elif self.time_left < 40:
+            elif self.time_left < TIMER_WARNING_THRESHOLD:
                 self.time_widget.styles.color = "orange"
 
     def action_end(self) -> None:
@@ -287,7 +293,7 @@ class BoggleApp(App):
                 yield Board()
                 if self.playing:
                     yield WordInput(
-                        max_length=16 if self.game.width > 4 else 15,
+                        max_length=MAX_WORD_LENGTH_LARGE_BOARD if self.game.width > 4 else MAX_WORD_LENGTH_SMALL_BOARD,
                         restrict=r"[A-Za-z]*",
                         placeholder="Enter word",
                     )
@@ -349,10 +355,17 @@ class BoggleApp(App):
         found = self.query_one(Results)
         found.make_list("Found", self.game.found.words)
         found.cursor_type = "none"
+        
+        # Batch widget queries for better performance
         f = self.game.found
-        self.query_one("#num-score").update(str(f.score))
-        self.query_one("#num-words").update(str(len(f.words)))
-        self.query_one("#num-long").update(str(f.longest))
+        score_widget = self.query_one("#num-score")
+        words_widget = self.query_one("#num-words")
+        long_widget = self.query_one("#num-long")
+        
+        # Update all widgets
+        score_widget.update(str(f.score))
+        words_widget.update(str(len(f.words)))
+        long_widget.update(str(f.longest))
 
 
 def main() -> None:
