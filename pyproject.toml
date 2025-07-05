@@ -5,21 +5,109 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tboggle"
 version = "0.1.0"
-description = "Add your description here"
+description = "Terminal-based Boggle game with high-performance word finding"
 readme = "README.md"
+license = {text = "GPL-3.0-or-later"}
+authors = [
+    {name = "Joel Boggle Developer"},
+]
+maintainers = [
+    {name = "Joel Boggle Developer"},
+]
+keywords = ["boggle", "word-game", "terminal", "textual", "tui", "puzzle", "game"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: C",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11", 
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Games/Entertainment :: Puzzle Games",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 requires-python = ">=3.9"
 dependencies = [
-    "pyinstaller>=6.14.1",
     "textual>=3.3.0",
-    "textual-dev>=1.7.0",
     "websockets>=12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "textual-dev>=1.7.0",
+    "pytest>=7.0.0",
+    "mypy>=1.0.0",
+]
+build = [
+    "pyinstaller>=6.14.1",
+]
+all = [
+    "tboggle[dev,build]",
 ]
 
 [project.scripts]
 tboggle = "tboggle.boggle:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/tboggle"
+Repository = "https://github.com/yourusername/tboggle"
+Issues = "https://github.com/yourusername/tboggle/issues"
+Documentation = "https://github.com/yourusername/tboggle#readme"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
 tboggle = ["*.sqlite3", "*.dat", "*.so", "*.css"]
+
+# C Extension Configuration
+[[tool.setuptools.ext-modules]]
+name = "tboggle.libwords"
+sources = ["libwords.c"]
+# Uncomment for optimized builds:
+# extra-compile-args = ["-O3"]
+
+# Development and Quality Tools Configuration
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = ["tboggle.*"]
+ignore_missing_imports = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]

@@ -44,4 +44,8 @@ clean:
 # Rebuild everything from scratch
 rebuild: clean all
 
-.PHONY: all test test-heuristics benchmark extreme clean rebuild
+# Rebuild Python C extension (equivalent to old "python setup.py build_ext --inplace")
+rebuild-ext:
+	pip install -e . --force-reinstall --no-deps
+
+.PHONY: all test test-heuristics benchmark extreme clean rebuild rebuild-ext
