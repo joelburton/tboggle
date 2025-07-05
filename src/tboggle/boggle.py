@@ -215,7 +215,7 @@ class Results(DataTable):
         self.border_title = "Stats"
         self.border_subtitle = ""
         self.clear(columns=True)
-        self.add_columns("Metric", "Value", "More")
+        self.add_columns("")
         self.header_height = 0
         
         game = self.app.game
@@ -232,8 +232,8 @@ class Results(DataTable):
     
     def _get_basic_stats(self, game: Game) -> list[tuple[str, str, str]]:
         """Get basic game statistics."""
-        dice_set_name = game.dice_set.name if hasattr(game.dice_set, 'name') else "Unknown"
-        dice_set_desc = game.dice_set.desc if hasattr(game.dice_set, 'desc') else f"{game.width}x{game.height}"
+        dice_set_name = game.dice_set.name
+        dice_set_desc = game.dice_set.desc
         
         # Calculate percentages with zero-division protection
         total_legal = len(game.legal.words)
@@ -245,26 +245,25 @@ class Results(DataTable):
         score_percentage = f"{(found_score / total_legal_score):.2%}" if total_legal_score > 0 else "0.00%"
         
         return [
-            ("Dice Set", dice_set_name, dice_set_desc),
-            ("Board Size", f"{game.width}x{game.height}", f"{game.width * game.height} dice"),
-            ("Scoring", "Points by length", "/".join(str(s) for s in game.scores)),
-            ("Words Found", f"{total_found}/{total_legal}", words_percentage),
-            ("Score", f"{found_score}/{total_legal_score}", score_percentage),
-            ("Longest Word", str(game.found.longest), f"Max: {game.legal.longest}"),
+            (f"Scoring",),
+            (f"  {"/".join(str(s) for s in game.scores)}",),
+            (f"Dice Set    {dice_set_name} {dice_set_desc}",),
+            (f"Board Size  {game.width}x{game.height}",),
+            (f"Found       {total_found}/{total_legal}  {words_percentage}",),
+            (f"Score       {found_score}/{total_legal_score}  {score_percentage}",),
+            (f"Longest     {str(game.found.longest)}  Max: {game.legal.longest}",),
         ]
     
     def _get_frequency_stats(self, game: Game) -> list[tuple[str, str, str]]:
         """Get word frequency statistics by length."""
         freq_rows = [
-            ("", "", ""),  # Empty row for spacing
-            ("[orange]Length[/]", "[orange]Legal[/]", "[orange]Found[/]"),
+            ("",),  # Empty row for spacing
+            ("[orange]Length[/] [orange]Legal[/] [orange]Found[/]",),
         ]
         
         for length, legal_count, found_count in game.freqs():
             freq_rows.append((
-                f"{length:2}",
-                f"{legal_count:3}",
-                f"{found_count:3}"
+                f"  {length:2}   {legal_count:3}   {found_count:3}",
             ))
         
         return freq_rows
