@@ -8,7 +8,6 @@
 
 typedef struct {
     char word[MAX_WORD_LEN + 1];
-    bool used;
 } HashEntry;
 
 HashEntry hash_table[HASH_SIZE];
@@ -30,7 +29,8 @@ static inline unsigned int hash_word(const char *word) {
 static inline bool insert(char *word) {
     unsigned int index = hash_word(word);
     
-    while (hash_table[index].used) {
+    // Check if slot is occupied (non-empty word)
+    while (hash_table[index].word[0] != '\0') {
         if (strcmp(hash_table[index].word, word) == 0) {
             return false;  // Already exists
         }
@@ -38,7 +38,6 @@ static inline bool insert(char *word) {
     }
     
     strcpy(hash_table[index].word, word);
-    hash_table[index].used = true;
     used_indices[used_count++] = index;  // Track this index for reset
     word_count++;
     return true;
@@ -48,7 +47,7 @@ static inline bool insert(char *word) {
 void reset_hash_table() {
     const int count = used_count;
     for (int i = 0; i < count; i++) {
-        hash_table[used_indices[i]].used = false;
+        hash_table[used_indices[i]].word[0] = '\0';  // Mark as empty
     }
     word_count = 0;
     used_count = 0;
