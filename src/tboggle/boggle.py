@@ -435,10 +435,10 @@ def main() -> None:
                 max_longest=choices.max_longest,
             )
         app = BoggleApp(game)
-        result = app.run()
-        if result == "board":
+        game_result = app.run()
+        if game_result == "board":
             pass
-        elif result == "game":
+        elif game_result == "game":
             choices = None
         else:
             break
