@@ -207,7 +207,7 @@ class Game:
             max_score: int = -1,
             min_longest: int = 3,
             max_longest: int = -1,
-            max_tries: int = 100_000,
+            max_tries: int = 1_000_000,
             random_seed: Optional[int] = None,
     ) -> None:
         """Generate a random board meeting specified constraints.

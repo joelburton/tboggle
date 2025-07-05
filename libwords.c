@@ -548,12 +548,13 @@ static bool board_looks_promising() {
     
     // Heuristic 1: Vowel ratio check (more permissive range)
     int vowel_percentage = (vowel_count * 100) / board_size;
-    if (vowel_percentage < 15 || vowel_percentage > 65) {
-        return false;  // Only reject extreme cases
+    // Need better vowel ratio for very high word counts
+    if (vowel_percentage < 20 || vowel_percentage > 55) {
+        return false;
     }
     
     // Heuristic 2: Need some common letters for word building (very permissive)
-    if (common_letters < 1) {
+    if (common_letters < 2) {
         return false;  // Only reject if completely missing common letters
     }
     
@@ -562,20 +563,8 @@ static bool board_looks_promising() {
         return false;  // Allow up to half special chars
     }
     
-    // For high word count requirements, be more selective
-    if (g_min_words > 100) {
-        // Need better vowel ratio for very high word counts
-        if (vowel_percentage < 20 || vowel_percentage > 55) {
-            return false;
-        }
-        // Need more common letters
-        if (common_letters < 2) {
-            return false;
-        }
-    }
-    
     // Additional check for extremely high requirements only
-    if (g_min_words > 200 || g_min_longest > 10) {
+    if (g_min_longest > 11) {
         // Must have excellent letter distribution
         if (vowel_count < 3 || common_letters < 3) {
             return false;
@@ -619,7 +608,7 @@ int fill_board(int max_tries) {
         make_dice();           // Generate random board
         
         // Fast rejection: skip expensive word finding if board looks poor
-        if (!board_looks_promising()) {
+        if ((g_min_longest >= 11 || g_max_words > 400) && !board_looks_promising()) {
             continue;          // Try another board without word analysis
         }
         
