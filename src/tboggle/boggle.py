@@ -19,6 +19,9 @@ from tboggle import fill
 from tboggle.dice import DiceSet
 from tboggle.game import Game, GuessResult, get_def
 from tboggle.chooser import Chooser, Choices
+from tboggle.pause_modal import PauseModal
+from tboggle.exit_modal import ExitModal
+from tboggle.lookup_modal import LookupModal
 
 
 class Board(Widget):
@@ -223,70 +226,6 @@ class Results(DataTable):
         ])
         self.disabled = True
         
-
-class PauseModal(ModalScreen):
-    BINDINGS = [Binding("escape", "dismiss"), Binding("ctrl+q", "dismiss")]
-
-    def compose(self):
-        with Container():
-            yield Label("Game Paused\n\nPress [orange]Esc[/] when ready")
-
-
-class ExitModal(ModalScreen):
-    """A modal exit screen."""
-
-    BINDINGS = [
-        Binding("escape", "dismiss"),
-        Binding("b", "board"),
-        Binding("ctrl+b", "board"),
-        Binding("g", "game"),
-        Binding("ctrl+g", "game"),
-        Binding("q", "quit"),
-        Binding("ctrl+q", "quit"),
-    ]
-
-    def compose(self) -> ComposeResult:
-        with Vertical():
-            yield Label("Play again or quit? ([orange]Esc[/] to cancel)\n")
-            with Horizontal():
-                yield Button("New Board", id="board", variant="primary")
-                yield Button("New Game", id="game", variant="warning")
-                yield Button("Quit", id="quit", variant="error")
-
-    @on(Button.Pressed, "#board")
-    def action_board(self) -> None:
-        self.app.exit("board")
-
-    @on(Button.Pressed, "#game")
-    def action_game(self) -> None:
-        self.app.exit("game")
-
-    @on(Button.Pressed, "#quit")
-    def action_quit(self) -> None:
-        self.app.exit("quit")
-
-    @on(Button.Pressed, "#continue")
-    def action_continue(self) -> None:
-        self.dismiss()
-
-
-class LookupModal(ModalScreen):
-    """Look up other words while reviewing end-of-game lists."""
-
-    BINDINGS = [Binding("escape", "dismiss"), Binding("ctrl+q", "dismiss")]
-
-    def compose(self):
-        with Container():
-            yield Label("Lookup word ([orange]Esc[/] to exit)")
-            yield Input(placeholder="Enter word")
-            yield Label(id="lookup-def")
-
-    @on(Input.Submitted)
-    def submitted(self, event):
-        word = event.value
-        defn = escape(get_def(word) or "(nothing found)")
-        self.query_one(Input).value = ""
-        self.query_one(Label).update(f"[u]{word}[/]: [i]{defn}[/]")
 
 class BoggleApp(App):
     CSS_PATH = "styles.css"
