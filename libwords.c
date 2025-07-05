@@ -218,7 +218,6 @@ static bool find_words( // NOLINT(*-no-recursion)
     if (g_board_failed) return false;
     
     // Cache board dimensions in local variables for better register allocation
-    const int h = g_board_height;
     const int w = g_board_width;
 
     // If not a legal tile, can't make word here
