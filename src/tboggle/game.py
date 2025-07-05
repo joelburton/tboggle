@@ -287,7 +287,9 @@ class Game:
         elif word in self.legal.words:
             self.found.add(word)
             return GuessResult.GOOD
-        elif get_def(word) == "":
+
+        defn = get_def(word)
+        if defn:
             return GuessResult.NOT_ON_BOARD
         else:
             self.bad.add(word)
