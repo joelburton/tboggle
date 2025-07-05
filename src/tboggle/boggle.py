@@ -246,7 +246,7 @@ class Results(DataTable):
         
         return [
             (f"Scoring",),
-            (f"  {"/".join(str(s) for s in game.scores)}",),
+            (f"  {'/'.join(str(s) for s in game.scores)}",),
             (f"Dice Set    {dice_set_name} {dice_set_desc}",),
             (f"Board Size  {game.width}x{game.height}",),
             (f"Found       {total_found}/{total_legal}  {words_percentage}",),
