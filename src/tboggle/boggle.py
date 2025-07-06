@@ -282,6 +282,7 @@ class BoggleApp(App):
         Binding("f", "found", "Found"),
         Binding("b", "bad", "Bad"),
         Binding("?", "lookup", "Lookup"),
+        Binding("ctrl+l", "lookup", priority=True), # for in-game checking
         # Binding("ctrl+a", "again", "Again"),
         Binding("ctrl+q", "quit", "Quit"),
     ]
@@ -351,7 +352,7 @@ class BoggleApp(App):
         if not self.app.game.duration and event == "pause":
             return False
         if self.playing:
-            if event in ("stats", "missed", "found", "bad", "again", "lookup"):
+            if event in ("stats", "missed", "found", "bad", "again"): # , "lookup"):
                 return False
         if not self.playing:
             if event in ("end", "pause"):
